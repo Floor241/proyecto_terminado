@@ -138,7 +138,7 @@ public class cursopropuesto extends JFrame {
 
     }
 
- 
+
     private void cargarListaMaterias() {
         DefaultListModel<Curso> modeloLista = new DefaultListModel<>();
         // Apuntamos al Sistema global por consistencia
