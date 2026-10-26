@@ -138,9 +138,7 @@ public class cursopropuesto extends JFrame {
 
     }
 
-    // ---------------------------------------------------------------------
-    // MÉTODO: CARGAR LISTA MATERIAS
-    // ---------------------------------------------------------------------
+ 
     private void cargarListaMaterias() {
         DefaultListModel<Curso> modeloLista = new DefaultListModel<>();
         // Apuntamos al Sistema global por consistencia
