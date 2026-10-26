@@ -16,7 +16,7 @@
           <text value="Administrador del Instituto &quot;Caminemos el Trayecto&quot;"/>
         </properties>
       </component>
-      <tabbedpane id="c1369" binding="tabbedPane1" default-binding="true">
+      <tabbedpane id="c1369" binding="tabbedPane1">
         <constraints>
           <grid row="1" column="0" row-span="1" col-span="5" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false">
             <preferred-size width="200" height="200"/>
@@ -656,14 +656,6 @@
         </constraints>
         <properties>
           <text value="Bienvenido Administrador"/>
-        </properties>
-      </component>
-      <component id="6b8d3" class="javax.swing.JButton" binding="cerrar">
-        <constraints>
-          <grid row="0" column="4" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="4" fill="0" indent="0" use-parent-layout="false"/>
-        </constraints>
-        <properties>
-          <text value="Cerrar Sesion"/>
         </properties>
       </component>
     </children>

@@ -5,15 +5,13 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import modelo.Usuario;
-import modelo.Alumno;
-import modelo.Sistema;
-import modelo.Curso;
-import modelo.Docente;
+
+import modelo.*;
 
 public class paneladmin extends JFrame {
 
-    // 1. COMPONENTES SOLAPA USUARIOS
+    private Instituto instituto;
+    // SOLAPA USUARIOS
     private JLabel titulo1;
     private JTabbedPane tabbedPane1;
     private JPanel usuarios;
@@ -35,7 +33,7 @@ public class paneladmin extends JFrame {
     private JButton buscar;
     private JLabel totalU;
 
-    // 2. COMPONENTES SOLAPA CURSOS
+    // SOLAPA CURSOS
     private JLabel lista;
     private JTextField buscarcur;
     private JButton buscarcurso;
@@ -60,7 +58,7 @@ public class paneladmin extends JFrame {
     private JLabel total;
     private JLabel totalc;
 
-    // 3. COMPONENTES SOLAPA CONFIGURACIÓN
+    // SOLAPA CONFIGURACIÓN
     private JLabel titulo4;
     private JLabel nueva;
     private JLabel conf;
@@ -85,9 +83,11 @@ public class paneladmin extends JFrame {
     private JButton habilitarCuenta;
 
     private JPanel panelPrincipal;
+    private Registro ventanaRegistroActual = null;
 
-    // Constructor de la ventana
-    public paneladmin() {
+
+    public paneladmin(Instituto instituto) {
+        this.instituto = instituto;
         $$$setupUI$$$();
 
         setTitle("Panel de Control - Administrador");
@@ -101,10 +101,8 @@ public class paneladmin extends JFrame {
 
         setSize(1100, 750);
         setLocationRelativeTo(null);
+        actualizarTablasAdmin();
 
-        // ==========================================
-        // CONFIGURACIÓN DE USUARIO Y TABLAUSER
-        // ==========================================
         DefaultTableModel modeloInicial = new DefaultTableModel();
         modeloInicial.addColumn("Documento");
         modeloInicial.addColumn("Nombre");
@@ -119,15 +117,29 @@ public class paneladmin extends JFrame {
 
                 String dni = tablauser.getValueAt(filaSeleccionada, 0).toString();
                 String nombreTxt = tablauser.getValueAt(filaSeleccionada, 1).toString();
-                String tipoTxt = tablauser.getValueAt(filaSeleccionada, 2).toString();
-                String estadoTxt = tablauser.getValueAt(filaSeleccionada, 3).toString();
+                String apellidoTxt = tablauser.getValueAt(filaSeleccionada, 2).toString();
+                String rolTxt = tablauser.getValueAt(filaSeleccionada, 3).toString();
 
                 textField1.setText(dni);
-                nom.setText(nombreTxt);
-                comboBox1.setSelectedItem(tipoTxt);
-                aod.setText(estadoTxt);
+                nom.setText(nombreTxt + " " + apellidoTxt);
+                comboBox1.setSelectedItem(rolTxt);
+
+
+                if (this.getInstituto() != null && this.getInstituto().getUsuarios() != null) {
+                    boolean encontrado = false;
+                    for (Usuario u : this.getInstituto().getUsuarios()) {
+                        if (u.getDocumento().equals(dni)) {
+                            aod.setText(u.isActivo() ? "Activa" : "Deshabilitada");
+                            encontrado = true;
+                            break;
+                        }
+                    }
+                    if (!encontrado) aod.setText("Sin seleccionar");
+                }
             }
         });
+
+
         deshabilitar.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -140,24 +152,29 @@ public class paneladmin extends JFrame {
                 String dni = tablauser.getValueAt(filaSeleccionada, 0).toString();
                 String nombreTxt = tablauser.getValueAt(filaSeleccionada, 1).toString();
 
-                for (Usuario u : Sistema.getInstituto().getUsuarios()) {
-                    if (u.getDocumento().equals(dni)) {
-                        u.setActivo(false);
-                        u.setMensajeSancion("Cuenta deshabilitada por la administración del Instituto.");
-                        break;
+                if (getInstituto() != null && getInstituto().getUsuarios() != null) {
+                    for (Usuario u : getInstituto().getUsuarios()) {
+                        if (u.getDocumento().equals(dni)) {
+
+                            u.setActivo(false);
+                            u.setMensajeSancion("Cuenta deshabilitada por la administración del Instituto.");
+
+                            aod.setText("Deshabilitada");
+                            break;
+                        }
                     }
                 }
 
                 cargarUsuarios("");
 
-
                 textField1.setText("");
                 nom.setText("");
                 aod.setText("Sin seleccionar");
 
-                JOptionPane.showMessageDialog(null, "La cuenta de " + nombreTxt + " ha sido deshabilitada.");
+                JOptionPane.showMessageDialog(null, "La cuenta de " + nombreTxt + " ha sido deshabilitada de forma rápida.");
             }
         });
+
 
         habilitarCuenta.addActionListener(new ActionListener() {
             @Override
@@ -168,18 +185,22 @@ public class paneladmin extends JFrame {
                     return;
                 }
 
-
                 String dniSeleccionado = tablauser.getValueAt(filaSeleccionada, 0).toString();
                 String nombreSeleccionado = tablauser.getValueAt(filaSeleccionada, 1).toString();
 
-                for (Usuario u : Sistema.getInstituto().getUsuarios()) {
-                    if (u.getDocumento().equals(dniSeleccionado)) {
-                        u.setActivo(true);
-                        u.setMensajeSancion("");
-                        break;
+
+                if (getInstituto() != null && getInstituto().getUsuarios() != null) {
+                    for (Usuario u : getInstituto().getUsuarios()) {
+                        if (u.getDocumento().equals(dniSeleccionado)) {
+                            u.setActivo(true);
+                            u.setMensajeSancion("");
+                            break;
+                        }
                     }
                 }
+
                 cargarUsuarios("");
+
 
                 textField1.setText("");
                 nom.setText("");
@@ -199,15 +220,29 @@ public class paneladmin extends JFrame {
             }
         });
 
-        // ==========================================
-        // BOTÓN CERRAR SESIÓN
-        // ==========================================
-        cerrar.addActionListener(new ActionListener() {
+
+
+
+        cerrarsesion.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                loginadmin ventanaLogin = new loginadmin();
-                ventanaLogin.setVisible(true);
-                dispose();
+
+                int respuesta = JOptionPane.showConfirmDialog(null,
+                        "¿Está seguro de que desea cerrar su sesión actual?",
+                        "Cerrar Sesión", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+
+                if (respuesta == JOptionPane.YES_OPTION) {
+
+
+                    if (loginadmin.instanciaLogin != null) {
+                        loginadmin.instanciaLogin.setVisible(true);
+                    } else {
+
+                        new loginadmin().setVisible(true);
+                    }
+
+                    dispose();
+                }
             }
         });
 
@@ -233,42 +268,47 @@ public class paneladmin extends JFrame {
                 String nuevoNombre = textoNombreCompleto;
                 String nuevoApellido = "";
 
+
                 if (textoNombreCompleto.contains(" ")) {
                     String[] partes = textoNombreCompleto.split(" ", 2);
-                    nuevoNombre = partes[0];
-                    nuevoApellido = partes[1];
+                    nuevoNombre = partes[0].trim();
+                    nuevoApellido = partes[1].trim();
                 }
 
                 boolean encontrado = false;
                 Usuario usuarioAEditar = null;
 
-                for (Usuario u : Sistema.getInstituto().getUsuarios()) {
-                    if (u.getDocumento().equals(dniParaEditar)) {
-                        usuarioAEditar = u;
-                        encontrado = true;
-                        break;
+
+                if (getInstituto() != null && getInstituto().getUsuarios() != null) {
+                    for (Usuario u : getInstituto().getUsuarios()) {
+                        if (u.getDocumento().equals(dniParaEditar)) {
+                            usuarioAEditar = u;
+                            encontrado = true;
+                            break;
+                        }
                     }
                 }
 
                 if (encontrado && usuarioAEditar != null) {
                     String rolActual = (usuarioAEditar instanceof Alumno) ? "Alumno" : "Docente";
+
                     if (!rolActual.equals(rolSeleccionado)) {
-                        Sistema.getInstituto().getUsuarios().remove(usuarioAEditar);
+                        getInstituto().getUsuarios().remove(usuarioAEditar);
                         Usuario usuarioTransformado;
                         if (rolSeleccionado.equals("Alumno")) {
                             usuarioTransformado = new Alumno(nuevoNombre, nuevoApellido, dniParaEditar);
                         } else {
                             usuarioTransformado = new Docente(nuevoNombre, nuevoApellido, dniParaEditar);
                         }
-
-                        Sistema.getInstituto().agregarUsuario(usuarioTransformado);
-
+                        getInstituto().agregarUsuario(usuarioTransformado);
                     } else {
+
                         usuarioAEditar.setNombre(nuevoNombre);
                         usuarioAEditar.setApellido(nuevoApellido);
                     }
 
                     cargarUsuarios("");
+
 
                     textField1.setText("");
                     nom.setText("");
@@ -277,7 +317,7 @@ public class paneladmin extends JFrame {
 
                     JOptionPane.showMessageDialog(null, "¡Los datos y el rol del usuario han sido modificados con éxito!", "Edición Exitosa", JOptionPane.INFORMATION_MESSAGE);
                 } else {
-                    JOptionPane.showMessageDialog(null, "No se encontró ningún usuario con el documento especificado.", "Error", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(null, "No se encontró ningún usuario con el documento especificado en la memoria activa.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         });
@@ -292,25 +332,41 @@ public class paneladmin extends JFrame {
                     JOptionPane.showMessageDialog(null, "Por favor, seleccione un usuario de la lista para restablecer su clave.", "Aviso", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
+
+
                 String dniSeleccionado = tablauser.getValueAt(filaSeleccionada, 0).toString();
                 String nombreSeleccionado = tablauser.getValueAt(filaSeleccionada, 1).toString();
 
-                for (Usuario u : Sistema.getInstituto().getUsuarios()) {
-                    if (u.getDocumento().equals(dniSeleccionado)) {
-                        u.setPassword(dniSeleccionado);
-                        u.setDebeCambiarPassword(true);
+                boolean exito = false;
 
 
-                        break;
+                if (getInstituto() != null && getInstituto().getUsuarios() != null) {
+                    for (Usuario u : getInstituto().getUsuarios()) {
+                        if (u.getDocumento().equals(dniSeleccionado)) {
+                            u.setPassword(dniSeleccionado);
+                            u.setDebeCambiarPassword(true);
+                            exito = true;
+                            break;
+                        }
                     }
                 }
 
-                JOptionPane.showMessageDialog(null, "La contraseña de " + nombreSeleccionado + " ha sido blanqueada.\n" +
-                                "Ahora es igual a su DNI (" + dniSeleccionado + ") y se le exigirá cambiarla en su próximo inicio de sesión.",
-                        "Blanqueo Exitoso", JOptionPane.INFORMATION_MESSAGE);
+                if (exito) {
+
+                    cargarUsuarios("");
+                    textField1.setText("");
+                    nom.setText("");
+                    aod.setText("Sin seleccionar");
+                    comboBox1.setSelectedIndex(0);
+
+                    JOptionPane.showMessageDialog(null, "La contraseña de " + nombreSeleccionado + " ha sido blanqueada.\n" +
+                                    "Ahora es igual a su DNI (" + dniSeleccionado + ") y se le exigirá cambiarla en su próximo inicio de sesión.",
+                            "Blanqueo Exitoso", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(null, "No se pudo encontrar al usuario en la memoria del sistema para restablecer la contraseña.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
             }
         });
-
 
         // BOTONES DE CONFIGURACIÓN
 
@@ -318,42 +374,49 @@ public class paneladmin extends JFrame {
         registrar.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                Registro ventanaRegistro = new Registro(paneladmin.this);
-                ventanaRegistro.setVisible(true);
+                ventanaRegistroActual = new Registro(paneladmin.this);
+                ventanaRegistroActual.setVisible(true);
             }
         });
+
 
 
         deshabilitarCuentaButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // Comprobamos que el combo tenga un usuario seleccionado
-                if (users.getSelectedItem() == null) {
+                if (users.getSelectedItem() == null || users.getSelectedIndex() <= 0) {
                     JOptionPane.showMessageDialog(null, "Seleccione un usuario de la lista desplegable.");
                     return;
                 }
 
-                String dniSeleccionado = users.getSelectedItem().toString(); // Recuperamos el DNI del combo
-                String motivo = msjsancion.getText();
+                String seleccionado = users.getSelectedItem().toString();
+                String dniSeleccionado = seleccionado.split(" - ")[0].trim();
+                String motivo = msjsancion.getText().trim();
 
                 if (motivo.isEmpty()) {
-                    JOptionPane.showMessageDialog(null, "Debe escribir el motivo de la sanción en el cuadro de texto.");
+                    JOptionPane.showMessageDialog(null, "Debe escribir obligatoriamente el motivo de la sanción en el cuadro de texto inferior.", "Falta Mensaje de Sanción", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
 
-                for (Usuario u : Sistema.getInstituto().getUsuarios()) {
-                    if (u.getDocumento().equals(dniSeleccionado)) {
-                        u.setActivo(false);
-                        u.setMensajeSancion(motivo);
-                        break;
+                if (getInstituto() != null && getInstituto().getUsuarios() != null) {
+                    for (Usuario u : getInstituto().getUsuarios()) {
+                        if (u.getDocumento().equals(dniSeleccionado)) {
+                            u.setActivo(false);
+                            u.setMensajeSancion(motivo);
+                            break;
+                        }
                     }
                 }
 
                 cargarUsuarios("");
 
+                textField1.setText("");
+                nom.setText("");
+                aod.setText("Sin seleccionar");
                 msjsancion.setText("");
+                users.setSelectedIndex(0);
 
-                JOptionPane.showMessageDialog(null, "Sanción aplicada de forma exitosa con su respectivo mensaje de bloqueo.");
+                JOptionPane.showMessageDialog(null, "Sanción personalizada aplicada con éxito.");
             }
         });
 
@@ -361,8 +424,8 @@ public class paneladmin extends JFrame {
         guardar.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String nuevaContra = new String(nuevac.getPassword());
-                String confirmarContra = new String(Confc.getPassword());
+                String nuevaContra = new String(nuevac.getPassword()).trim();
+                String confirmarContra = new String(Confc.getPassword()).trim();
 
                 if (nuevaContra.isEmpty() || confirmarContra.isEmpty()) {
                     JOptionPane.showMessageDialog(null, "Por favor, complete ambos campos de contraseña.", "Campos Vacíos", JOptionPane.WARNING_MESSAGE);
@@ -373,42 +436,52 @@ public class paneladmin extends JFrame {
                     JOptionPane.showMessageDialog(null, "Las contraseñas ingresadas no coinciden. Verifique los datos.", "Error de Validación", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
-                JOptionPane.showMessageDialog(null, "¡Su contraseña de Administrador ha sido modificada con éxito!", "Configuración Guardada", JOptionPane.INFORMATION_MESSAGE);
+
+
+                Sistema.passwordAdmin = nuevaContra;
+
+                JOptionPane.showMessageDialog(null, "¡Su contraseña de Administrador ha sido modificada con éxito!\nUse su nueva clave en el próximo inicio de sesión.", "Configuración Guardada", JOptionPane.INFORMATION_MESSAGE);
                 nuevac.setText("");
                 Confc.setText("");
             }
         });
 
 
-
-
         resetearContraseñaButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                if (users.getSelectedItem() == null) {
+                if (users.getSelectedItem() == null || users.getSelectedIndex() <= 0) {
                     JOptionPane.showMessageDialog(null, "Por favor, seleccione un usuario de la lista desplegable.", "Aviso", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
 
-                String dniSeleccionado = users.getSelectedItem().toString();
 
-                for (Usuario u : Sistema.getInstituto().getUsuarios()) {
-                    if (u.getDocumento().equals(dniSeleccionado)) {
-                        u.setPassword(dniSeleccionado);
-                        u.setDebeCambiarPassword(true);
+                String seleccionado = users.getSelectedItem().toString();
+                String dniSeleccionado = seleccionado.split(" - ")[0].trim();
 
-                        JOptionPane.showMessageDialog(null, "La contraseña del usuario con DNI " + dniSeleccionado + " ha sido blanqueada de manera correcta.", "Blanqueo Exitoso", JOptionPane.INFORMATION_MESSAGE);
-                        break;
+                boolean exito = false;
+                if (getInstituto() != null && getInstituto().getUsuarios() != null) {
+                    for (Usuario u : getInstituto().getUsuarios()) {
+                        if (u.getDocumento().equals(dniSeleccionado)) {
+                            u.setPassword(dniSeleccionado);
+                            u.setDebeCambiarPassword(true);
+                            exito = true;
+                            break;
+                        }
                     }
                 }
-            }
-        });
-        cerrarsesion.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                loginadmin ventanaLogin = new loginadmin();
-                ventanaLogin.setVisible(true);
-                dispose(); // Cierra el panel administrador de manera limpia
+
+                if (exito) {
+                    users.setSelectedIndex(0);
+                    msjsancion.setText("");
+                    textField1.setText("");
+                    nom.setText("");
+                    aod.setText("Sin seleccionar");
+
+                    JOptionPane.showMessageDialog(null, "La contraseña del usuario con DNI " + dniSeleccionado + " ha sido blanqueada de manera correcta desde la configuración.", "Blanqueo Exitoso", JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(null, "No se pudo encontrar al usuario en la memoria activa.", "Error", JOptionPane.ERROR_MESSAGE);
+                }
             }
         });
 
@@ -418,33 +491,57 @@ public class paneladmin extends JFrame {
         DefaultTableModel modeloCursosInicial = new DefaultTableModel();
         modeloCursosInicial.addColumn("ID");
         modeloCursosInicial.addColumn("Nombre");
-        modeloCursosInicial.addColumn("Estado");
         modeloCursosInicial.addColumn("Cupo Máx.");
+        modeloCursosInicial.addColumn("Docente");
+        modeloCursosInicial.addColumn("Estado");
         table2.setModel(modeloCursosInicial);
 
-        buscarcurso.doClick();
+
+        actualizarTablasAdmin();
 
         table2.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting() && table2.getSelectedRow() != -1) {
                 int filaSeleccionada = table2.getSelectedRow();
                 String idCurso = table2.getValueAt(filaSeleccionada, 0).toString();
 
-
                 for (Curso curso : Sistema.getInstituto().getCursos()) {
                     if (curso.getId().equals(idCurso)) {
-
                         nombretext.setText(curso.getNombre());
                         descrp.setText(curso.getDescripcion());
                         doctext.setText(curso.getDocumentoDocente());
                         estadoacosus.setText(curso.getEstado());
                         cupocant.setText(String.valueOf(curso.getCupoMaximo()));
-                        insccant.setText("0");
-                        requi.setText("Ninguno");
+
+                        int cantInscriptos = curso.getAlumnosInscritos() != null ? curso.getAlumnosInscritos().size() : 0;
+                        insccant.setText(String.valueOf(cantInscriptos));
+                        if (curso.getIdsCorrelativas() == null || curso.getIdsCorrelativas().isEmpty()) {
+                            requi.setText("Ninguno (No requiere cursos previos)");
+                        } else {
+                            StringBuilder textoCorrelativas = new StringBuilder();
+                            for (int i = 0; i < curso.getIdsCorrelativas().size(); i++) {
+                                String idCorr = curso.getIdsCorrelativas().get(i);
+
+                                String nombreCorr = idCorr;
+                                for (Curso cAux : Sistema.getInstituto().getCursos()) {
+                                    if (cAux.getId().equals(idCorr)) {
+                                        nombreCorr = cAux.getNombre();
+                                        break;
+                                    }
+                                }
+
+                                textoCorrelativas.append(idCorr).append(" - ").append(nombreCorr);
+                                if (i < curso.getIdsCorrelativas().size() - 1) {
+                                    textoCorrelativas.append("\n");
+                                }
+                            }
+                            requi.setText(textoCorrelativas.toString());
+                        }
                         break;
                     }
                 }
             }
         });
+
 
         aprobarCursoButton.addActionListener(new ActionListener() {
             @Override
@@ -457,41 +554,57 @@ public class paneladmin extends JFrame {
 
                 String idCurso = table2.getValueAt(filaSeleccionada, 0).toString();
 
-                for (Curso curso : Sistema.getInstituto().getCursos()) {
-                    if (curso.getId().equals(idCurso)) {
-                        if (curso.getEstado().equalsIgnoreCase("Propuesto")) {
-                            curso.setEstado("Habilitado");
-                            estadoacosus.setText("Habilitado");
-                            JOptionPane.showMessageDialog(null, "El curso '" + curso.getNombre() + "' ha sido aprobado y ahora se encuentra HABILITADO.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                        } else {
-                            JOptionPane.showMessageDialog(null, "Solo se pueden aprobar cursos en estado 'Propuesto'. Estado actual: " + curso.getEstado(), "Acción Denegada", JOptionPane.WARNING_MESSAGE);
+                if (Sistema.getInstituto() != null && Sistema.getInstituto().getCursos() != null) {
+                    for (Curso curso : Sistema.getInstituto().getCursos()) {
+                        if (curso.getId().equals(idCurso)) {
+                            if (curso.getEstado().equalsIgnoreCase("Propuesto")) {
+
+                                curso.setEstado("Habilitado");
+                                estadoacosus.setText("Habilitado");
+
+                                JOptionPane.showMessageDialog(null, "El curso '" + curso.getNombre() + "' ha sido aprobado y ahora se encuentra HABILITADO.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                            } else {
+                                JOptionPane.showMessageDialog(null, "Solo se pueden aprobar cursos en estado 'Propuesto'. Estado actual: " + curso.getEstado(), "Acción Denegada", JOptionPane.WARNING_MESSAGE);
+                            }
+                            break;
                         }
-                        break;
                     }
                 }
-                buscarcurso.doClick();
+                actualizarTablasAdmin();
             }
         });
 
 
         tabbedPane1.addChangeListener(e -> {
-            if (tabbedPane1.getSelectedIndex() == 1) {
+            int indice = tabbedPane1.getSelectedIndex();
+            if (indice == -1) return;
 
+            String nombrePestaña = tabbedPane1.getTitleAt(indice).trim().toLowerCase();
+
+            if (nombrePestaña.contains("curso")) {
                 String filtroCurso = buscarcur.getText().toLowerCase().trim();
                 DefaultTableModel modeloCursos = (DefaultTableModel) table2.getModel();
                 modeloCursos.setRowCount(0);
 
                 for (Curso curso : Sistema.getInstituto().getCursos()) {
                     if (filtroCurso.isEmpty() || curso.getNombre().toLowerCase().contains(filtroCurso) || curso.getId().toLowerCase().contains(filtroCurso)) {
+                        String nombreCompletoDocente = curso.getDocumentoDocente();
+                        Usuario u = Sistema.getInstituto().buscarUsuarioPorDni(curso.getDocumentoDocente());
+                        if (u != null) {
+                            nombreCompletoDocente = u.getNombre() + " " + u.getApellido();
+                        }
                         modeloCursos.addRow(new Object[]{
                                 curso.getId(),
                                 curso.getNombre(),
-                                curso.getEstado(),
-                                curso.getCupoMaximo()
+                                curso.getCupoMaximo(),
+                                nombreCompletoDocente,
+                                curso.getEstado()
                         });
                     }
                 }
                 totalc.setText(String.valueOf(modeloCursos.getRowCount()));
+            } else if (nombrePestaña.contains("configuracion") || nombrePestaña.contains("config")) {
+                cargarComboUsuariosConfig();
             }
         });
 
@@ -524,11 +637,6 @@ public class paneladmin extends JFrame {
             }
         });
 
-        // BOTÓN: Ver Alumnos (Inscritos en la materia)
-
-
-
-
         verAlumnosButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -554,36 +662,116 @@ public class paneladmin extends JFrame {
                 DefaultTableModel modeloCursos = (DefaultTableModel) table2.getModel();
                 modeloCursos.setRowCount(0);
 
-                for (Curso curso : Sistema.getInstituto().getCursos()) {
-                    if (filtroCurso.isEmpty() || curso.getNombre().toLowerCase().contains(filtroCurso) || curso.getId().toLowerCase().contains(filtroCurso)) {
+                if (Sistema.getInstituto() != null && Sistema.getInstituto().getCursos() != null) {
+                    for (Curso curso : Sistema.getInstituto().getCursos()) {
+                        if (filtroCurso.isEmpty() || curso.getNombre().toLowerCase().contains(filtroCurso) || curso.getId().toLowerCase().contains(filtroCurso)) {
 
-                        modeloCursos.addRow(new Object[]{
-                                curso.getId(),
-                                curso.getNombre(),
-                                curso.getEstado(),
-                                curso.getCupoMaximo()
-                        });
+                            String nombreCompletoDocente = curso.getDocumentoDocente();
+                            Usuario u = Sistema.getInstituto().buscarUsuarioPorDni(curso.getDocumentoDocente());
+                            if (u != null) {
+                                nombreCompletoDocente = u.getNombre() + " " + u.getApellido();
+                            }
+                            modeloCursos.addRow(new Object[]{
+                                    curso.getId(),
+                                    curso.getNombre(),
+                                    curso.getCupoMaximo(),
+                                    nombreCompletoDocente,
+                                    curso.getEstado()
+                            });
+                        }
                     }
                 }
-
                 totalc.setText(String.valueOf(modeloCursos.getRowCount()));
             }
         });
+
+
+        actualizarTablasAdmin();
+        cargarUsuarios("");
+        cargarComboUsuariosConfig();
+
+
+        users.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                // Si no hay nada seleccionado o es el texto por defecto, limpiamos el cuadro
+                if (users.getSelectedItem() == null || users.getSelectedIndex() <= 0) {
+                    msjsancion.setText("");
+                    return;
+                }
+
+                String seleccionado = users.getSelectedItem().toString();
+                String[] partes = seleccionado.split(" - ");
+                String dni = partes[0].trim();
+
+
+                if (getInstituto() != null && getInstituto().getUsuarios() != null) {
+                    for (Usuario u : getInstituto().getUsuarios()) {
+                        if (u.getDocumento().equals(dni)) {
+                            if (!u.isActivo()) {
+                                msjsancion.setText(u.getMensajeSancion());
+                            } else {
+                                msjsancion.setText("La cuenta seleccionada se encuentra activa y no registra mensajes de bloqueo.");
+                            }
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+
+    }
+
+    public Instituto getInstituto() {
+        return this.instituto;
     }
 
 
-    // Método para abrir una ventana emergente y listar los alumnos del curso seleccionado
-    public void mostrarVentanaAlumnos(String idCurso, String nombreCurso) {
+    public void actualizarTablasAdmin() {
+        DefaultTableModel modeloCursos = (DefaultTableModel) table2.getModel();
+        modeloCursos.setRowCount(0);
 
+        if (Sistema.getInstituto() != null && Sistema.getInstituto().getCursos() != null) {
+            for (Curso c : Sistema.getInstituto().getCursos()) {
+
+                String nombreCompletoDocente = c.getDocumentoDocente();
+                Usuario u = Sistema.getInstituto().buscarUsuarioPorDni(c.getDocumentoDocente());
+                if (u != null) {
+                    nombreCompletoDocente = u.getNombre() + " " + u.getApellido();
+                }
+
+                Object[] fila = {
+                        c.getId(),
+                        c.getNombre(),
+                        c.getCupoMaximo(),
+                        nombreCompletoDocente,
+                        c.getEstado()
+                };
+                modeloCursos.addRow(fila);
+            }
+        }
+
+        if (table2 != null) {
+            table2.revalidate();
+            table2.repaint();
+        }
+
+        if (totalc != null && modeloCursos != null) {
+            totalc.setText(String.valueOf(modeloCursos.getRowCount()));
+        }
+    }
+
+
+    public void mostrarVentanaAlumnos(String idCurso, String nombreCurso) {
         JDialog ventanaFlotante = new JDialog(this, "Alumnos Inscritos - " + nombreCurso, true);
         ventanaFlotante.setSize(500, 400);
         ventanaFlotante.setLocationRelativeTo(this);
         ventanaFlotante.setLayout(new BorderLayout(10, 10));
 
-
         JLabel encabezado = new JLabel(" Listado oficial de alumnos para: " + nombreCurso, JLabel.CENTER);
         encabezado.setFont(new Font("Arial", Font.BOLD, 14));
         ventanaFlotante.add(encabezado, BorderLayout.NORTH);
+
         DefaultTableModel modeloTablaAlumnos = new DefaultTableModel();
         modeloTablaAlumnos.addColumn("Documento / DNI");
         modeloTablaAlumnos.addColumn("Nombre y Apellido");
@@ -593,30 +781,31 @@ public class paneladmin extends JFrame {
         JScrollPane scrollPanel = new JScrollPane(tablaAlumnos);
         ventanaFlotante.add(scrollPanel, BorderLayout.CENTER);
 
-        for (Curso c : Sistema.getInstituto().getCursos()) {
-            if (c.getId().equals(idCurso)) {
 
-                // Si la lista de alumnos del curso está vacía, metemos alumnos de prueba
-                if (c.getAlumnosInscritos().isEmpty()) {
-                    // Semillas de prueba locales automáticas para que el docente vea filas cargadas
-                    modeloTablaAlumnos.addRow(new Object[]{"44556677", "Juan Pérez", "Alumno"});
-                    modeloTablaAlumnos.addRow(new Object[]{"11223344", "Lucas Fernández", "Alumno"});
-                } else {
+        if (instituto != null && instituto.getCursos() != null) {
+            for (Curso c : instituto.getCursos()) {
+                if (c.getId().equals(idCurso)) {
 
-                    for (String dniAlumno : c.getAlumnosInscritos()) {
-                        Usuario alumno = Sistema.getInstituto().buscarUsuarioPorDni(dniAlumno);
-                        if (alumno != null) {
-                            modeloTablaAlumnos.addRow(new Object[]{
-                                    alumno.getDocumento(),
-                                    alumno.getNombre() + " " + alumno.getApellido(),
-                                    "Alumno"
-                            });
+                    if (c.getAlumnosInscritos() != null) {
+                        for (String dniAlumno : c.getAlumnosInscritos()) {
+                            Usuario alumno = instituto.buscarUsuarioPorDni(dniAlumno);
+                            if (alumno != null) {
+                                modeloTablaAlumnos.addRow(new Object[]{
+                                        alumno.getDocumento(),
+                                        alumno.getNombre() + " " + alumno.getApellido(),
+                                        "Alumno"
+                                });
+                            } else {
+
+                                modeloTablaAlumnos.addRow(new Object[]{dniAlumno, "Usuario no registrado", "Alumno"});
+                            }
                         }
                     }
+                    break;
                 }
-                break;
             }
         }
+
         JButton botonCerrar = new JButton("Cerrar Lista");
         botonCerrar.addActionListener(e -> ventanaFlotante.dispose());
         ventanaFlotante.add(botonCerrar, BorderLayout.SOUTH);
@@ -626,32 +815,56 @@ public class paneladmin extends JFrame {
 
 
     public void cargarUsuarios(String filtro) {
-        DefaultTableModel modeloTabla = (DefaultTableModel) tablauser.getModel();
+
+        DefaultTableModel modeloTabla = new DefaultTableModel(
+                new Object[]{"DNI / Documento", "Nombre", "Apellido", "Rol"}, 0
+        );
+
         modeloTabla.setRowCount(0);
 
-        String filtroMinuscula = filtro.toLowerCase().trim();
-        for (Usuario usuario : Sistema.getInstituto().getUsuarios()) {
-            String tipoUsuario = (usuario instanceof Alumno) ? "Alumno" : "Docente";
-            String nombreCompleto = (usuario.getNombre() + " " + usuario.getApellido()).toLowerCase();
-            String dni = usuario.getDocumento();
 
-            if (filtroMinuscula.isEmpty() || dni.contains(filtroMinuscula) || nombreCompleto.contains(filtroMinuscula)) {
-                modeloTabla.addRow(new Object[]{
-                        usuario.getDocumento(),
-                        usuario.getNombre() + " " + usuario.getApellido(),
-                        tipoUsuario,
-                        usuario.isActivo() ? "Activo" : "Deshabilitado"
-                });
+        if (this.getInstituto() != null && this.getInstituto().getUsuarios() != null) {
+            for (Usuario u : this.getInstituto().getUsuarios()) {
+
+                String rolTexto = "Usuario";
+                if (u instanceof Alumno) {
+                    rolTexto = "Alumno";
+                } else if (u instanceof Docente) {
+                    rolTexto = "Docente";
+                }
+
+                String textoBuscar = filtro.toLowerCase().trim();
+                if (textoBuscar.isEmpty() || u.getNombre().toLowerCase().contains(textoBuscar) ||
+                        u.getApellido().toLowerCase().contains(textoBuscar) || u.getDocumento().contains(textoBuscar)) {
+
+                    Object[] fila = {u.getDocumento(), u.getNombre(), u.getApellido(), rolTexto};
+                    modeloTabla.addRow(fila);
+                }
             }
         }
-        users.removeAllItems();
-        for (Usuario u : Sistema.getInstituto().getUsuarios()) {
-            users.addItem(u.getDocumento());
+
+        if (tablauser != null) {
+            tablauser.setModel(modeloTabla);
+            tablauser.revalidate();
+            tablauser.repaint();
         }
-        totalU.setText(String.valueOf(modeloTabla.getRowCount()));
-        doc.setText("admin");
-        roladmi.setText("Administrador General");
     }
+
+    public void cargarComboUsuariosConfig() {
+        if (users != null) {
+            users.removeAllItems();
+            users.addItem("Seleccione un usuario...");
+
+            if (this.getInstituto() != null && this.getInstituto().getUsuarios() != null) {
+                for (Usuario u : this.getInstituto().getUsuarios()) {
+
+                    String item = u.getDocumento() + " - " + u.getNombre() + " " + u.getApellido();
+                    users.addItem(item);
+                }
+            }
+        }
+    }
+
 
     /**
      * Method generated by IntelliJ IDEA GUI Designer
@@ -887,8 +1100,5 @@ public class paneladmin extends JFrame {
         titulo2 = new JLabel();
         titulo2.setText("Bienvenido Administrador");
         panel1.add(titulo2, new com.intellij.uiDesigner.core.GridConstraints(0, 3, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        cerrar = new JButton();
-        cerrar.setText("Cerrar Sesion");
-        panel1.add(cerrar, new com.intellij.uiDesigner.core.GridConstraints(0, 4, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_EAST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
     }
 }

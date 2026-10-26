@@ -8,7 +8,7 @@ import modelo.Alumno;
 import modelo.Docente;
 import modelo.Sistema;
 
-public class Registro extends JFrame { // 1. Heredamos de JFrame para que sea una ventana
+public class Registro extends JFrame {
 
     private JLabel registro;
     private JLabel nombre;
@@ -20,13 +20,7 @@ public class Registro extends JFrame { // 1. Heredamos de JFrame para que sea un
     private JComboBox roldesplegable;
     private JButton registrar;
     private JButton cancelar;
-
-
     private JPanel panelPrincipal;
-
-
-
-
     private paneladmin ventanaPadre;
 
 
@@ -35,7 +29,7 @@ public class Registro extends JFrame { // 1. Heredamos de JFrame para que sea un
 
         $$$setupUI$$$();
 
-        // Configuraciones básicas de la ventana
+
         setTitle("Administración - Registrar Usuario");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
@@ -43,63 +37,76 @@ public class Registro extends JFrame { // 1. Heredamos de JFrame para que sea un
         pack();
         setLocationRelativeTo(null);
 
-        //  botón Registrar
         registrar.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String documento = compledoc.getText();
-                String nombreTxt = complenom.getText();
-                String apellidoTxt = complape.getText();
+                String documento = compledoc.getText().trim();
+                String nombreTxt = complenom.getText().trim();
+                String apellidoTxt = complape.getText().trim();
                 String rolSeleccionado = roldesplegable.getSelectedItem().toString();
-
 
                 if (documento.isEmpty() || nombreTxt.isEmpty() || apellidoTxt.isEmpty() || rolSeleccionado.equals("seleccione")) {
                     JOptionPane.showMessageDialog(null, "Por favor, complete todos los campos y seleccione un rol válido.", "Campos Incompletos", JOptionPane.WARNING_MESSAGE);
-                } else {
-                    if (rolSeleccionado.equals("Alumno")) {
-                        Alumno alumno = new Alumno(nombreTxt, apellidoTxt, documento);
-                        Sistema.getInstituto().agregarUsuario(alumno);
-                        System.out.println("Usuarios registrados: " + Sistema.getInstituto().getUsuarios().size());
-                    } else {
-                        Docente docente = new Docente(nombreTxt, apellidoTxt, documento);
-                        Sistema.getInstituto().agregarUsuario(docente);
-                        System.out.println("Usuarios registrados: " + Sistema.getInstituto().getUsuarios().size());
-                    }
-
-
-                    String mensajeExito = "Usuario registrado con éxito:\n" +
-                            "Nombre completo: " + nombreTxt + " " + apellidoTxt + "\n" +
-                            "DNI: " + documento + "\n" +
-                            "Rol: " + rolSeleccionado + "\n\n" +
-                            "Recuerde: La contraseña inicial será su número de documento.";
-
-                    JOptionPane.showMessageDialog(null, mensajeExito, "Registro Exitoso", JOptionPane.INFORMATION_MESSAGE);
-
-
-                    ventanaPadre.cargarUsuarios("");
-
-
-                    compledoc.setText("");
-                    complenom.setText("");
-                    complape.setText("");
-                    roldesplegable.setSelectedIndex(0);
-
-                    dispose();
+                    return;
                 }
-            }
-        });
+
+                modelo.Instituto inst = ventanaPadre.getInstituto();
+
+                for (modelo.Usuario u : inst.getUsuarios()) {
+                    if (u.getDocumento().equals(documento)) {
+                        JOptionPane.showMessageDialog(null, "Error: Ya existe un usuario registrado con el DNI " + documento, "Usuario Duplicado", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                }
 
 
-        cancelar.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
+                if (rolSeleccionado.equalsIgnoreCase("Alumno")) {
+                    modelo.Alumno nuevoAlumno = new modelo.Alumno(nombreTxt, apellidoTxt, documento);
+                    nuevoAlumno.setPassword(documento);
+
+                    inst.getUsuarios().add(nuevoAlumno);
+
+                    if (modelo.Sistema.getInstituto() != null) {
+                        modelo.Sistema.getInstituto().agregarUsuario(nuevoAlumno);
+                    }
+                } else {
+                    modelo.Docente nuevoDocente = new modelo.Docente(nombreTxt, apellidoTxt, documento);
+                    nuevoDocente.setPassword(documento);
+
+                    inst.getUsuarios().add(nuevoDocente);
+
+                    if (modelo.Sistema.getInstituto() != null) {
+                        modelo.Sistema.getInstituto().agregarUsuario(nuevoDocente);
+                    }
+                }
+
+                String mensajeExito = "Usuario registrado con éxito:\n" +
+                        "Nombre completo: " + nombreTxt + " " + apellidoTxt + "\n" +
+                        "DNI: " + documento + "\n" +
+                        "Rol: " + rolSeleccionado + "\n\n" +
+                        "Recuerde: La contraseña inicial será su número de documento.";
+
+                JOptionPane.showMessageDialog(null, mensajeExito, "Registro Exitoso", JOptionPane.INFORMATION_MESSAGE);
+
+
+                ventanaPadre.cargarUsuarios("");
+                compledoc.setText("");
+                complenom.setText("");
+                complape.setText("");
+                roldesplegable.setSelectedIndex(0);
 
                 dispose();
             }
         });
 
+        cancelar.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                dispose();
+            }
+        });
     }
-    // 5. Método Main provisional para que pruebes el funcionamiento del registro de manera individual
+    // 5. Método Main provisional para probar el funcionamiento del registro de manera individual
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
 
@@ -108,51 +115,52 @@ public class Registro extends JFrame { // 1. Heredamos de JFrame para que sea un
         });
     }
 
-    /**
-     * Method generated by IntelliJ IDEA GUI Designer
-     * >>> IMPORTANT!! <<<
-     * DO NOT edit this method OR call it in your code!
-     *
-     * @noinspection ALL
-     */
-    private void $$$setupUI$$$() {
-        // Cambié "final JPanel panel1 = new JPanel();" por la variable global "panelPrincipal"
-        panelPrincipal = new JPanel();
-        panelPrincipal.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(6, 3, new Insets(15, 15, 15, 15), -1, -1));
-        registro = new JLabel();
-        registro.setText("Registrar Nuevo Usuario");
-        panelPrincipal.add(registro, new com.intellij.uiDesigner.core.GridConstraints(0, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label1 = new JLabel();
-        label1.setText("Documento:");
-        panelPrincipal.add(label1, new com.intellij.uiDesigner.core.GridConstraints(1, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        nombre = new JLabel();
-        nombre.setText("Nombre:");
-        panelPrincipal.add(nombre, new com.intellij.uiDesigner.core.GridConstraints(2, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        apellido = new JLabel();
-        apellido.setText("Apellido:");
-        panelPrincipal.add(apellido, new com.intellij.uiDesigner.core.GridConstraints(3, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        rol = new JLabel();
-        rol.setText("Rol:");
-        panelPrincipal.add(rol, new com.intellij.uiDesigner.core.GridConstraints(4, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        compledoc = new JTextField();
-        compledoc.setText("");
-        panelPrincipal.add(compledoc, new com.intellij.uiDesigner.core.GridConstraints(1, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        complenom = new JTextField();
-        panelPrincipal.add(complenom, new com.intellij.uiDesigner.core.GridConstraints(2, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        complape = new JTextField();
-        panelPrincipal.add(complape, new com.intellij.uiDesigner.core.GridConstraints(3, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        roldesplegable = new JComboBox();
-        final DefaultComboBoxModel defaultComboBoxModel1 = new DefaultComboBoxModel();
-        defaultComboBoxModel1.addElement("seleccione");
-        defaultComboBoxModel1.addElement("Alumno");
-        defaultComboBoxModel1.addElement("Docente");
-        roldesplegable.setModel(defaultComboBoxModel1);
-        panelPrincipal.add(roldesplegable, new com.intellij.uiDesigner.core.GridConstraints(4, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        registrar = new JButton();
-        registrar.setText("Registrar");
-        panelPrincipal.add(registrar, new com.intellij.uiDesigner.core.GridConstraints(5, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        cancelar = new JButton();
-        cancelar.setText("Cancelar");
-        panelPrincipal.add(cancelar, new com.intellij.uiDesigner.core.GridConstraints(5, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-    }
+
+/**
+ * Method generated by IntelliJ IDEA GUI Designer
+ * >>> IMPORTANT!! <<<
+ * DO NOT edit this method OR call it in your code!
+ *
+ * @noinspection ALL
+ */
+private void $$$setupUI$$$() {
+    // Cambié "final JPanel panel1 = new JPanel();" por la variable global "panelPrincipal"
+    panelPrincipal = new JPanel();
+    panelPrincipal.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(6, 3, new Insets(15, 15, 15, 15), -1, -1));
+    registro = new JLabel();
+    registro.setText("Registrar Nuevo Usuario");
+    panelPrincipal.add(registro, new com.intellij.uiDesigner.core.GridConstraints(0, 0, 1, 2, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+    final JLabel label1 = new JLabel();
+    label1.setText("Documento:");
+    panelPrincipal.add(label1, new com.intellij.uiDesigner.core.GridConstraints(1, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+    nombre = new JLabel();
+    nombre.setText("Nombre:");
+    panelPrincipal.add(nombre, new com.intellij.uiDesigner.core.GridConstraints(2, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+    apellido = new JLabel();
+    apellido.setText("Apellido:");
+    panelPrincipal.add(apellido, new com.intellij.uiDesigner.core.GridConstraints(3, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+    rol = new JLabel();
+    rol.setText("Rol:");
+    panelPrincipal.add(rol, new com.intellij.uiDesigner.core.GridConstraints(4, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+    compledoc = new JTextField();
+    compledoc.setText("");
+    panelPrincipal.add(compledoc, new com.intellij.uiDesigner.core.GridConstraints(1, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+    complenom = new JTextField();
+    panelPrincipal.add(complenom, new com.intellij.uiDesigner.core.GridConstraints(2, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+    complape = new JTextField();
+    panelPrincipal.add(complape, new com.intellij.uiDesigner.core.GridConstraints(3, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+    roldesplegable = new JComboBox();
+    final DefaultComboBoxModel defaultComboBoxModel1 = new DefaultComboBoxModel();
+    defaultComboBoxModel1.addElement("seleccione");
+    defaultComboBoxModel1.addElement("Alumno");
+    defaultComboBoxModel1.addElement("Docente");
+    roldesplegable.setModel(defaultComboBoxModel1);
+    panelPrincipal.add(roldesplegable, new com.intellij.uiDesigner.core.GridConstraints(4, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+    registrar = new JButton();
+    registrar.setText("Registrar");
+    panelPrincipal.add(registrar, new com.intellij.uiDesigner.core.GridConstraints(5, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+    cancelar = new JButton();
+    cancelar.setText("Cancelar");
+    panelPrincipal.add(cancelar, new com.intellij.uiDesigner.core.GridConstraints(5, 2, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+}
 }

@@ -1,9 +1,11 @@
 package visual;
-
-import javax.swing.*;
-import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import javax.swing.*; //
+import java.awt.*; //
+import java.awt.event.ActionEvent; //
+import java.awt.event.ActionListener; //
+import modelo.Instituto; //
+import modelo.Docente; //
+import modelo.Alumno; //
 
 public class loginadmin extends JFrame {
     private JLabel inst;
@@ -15,126 +17,175 @@ public class loginadmin extends JFrame {
     private JLabel usuario;
     private JButton cambiarcont;
     private JPanel panelPrincipal;
+    private static modelo.Instituto instituto = new modelo.Instituto();
 
+    public static loginadmin instanciaLogin;
 
     public loginadmin() {
+        instanciaLogin = this;
 
         $$$setupUI$$$();
 
-        // Configuraciones de la ventana
+
         setTitle("Acceso al Sistema");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        // Buscamos el panel generado automáticamente para asignarlo a la ventana
         setContentPane(panelPrincipal);
-        pack(); // Ajusta el tamaño al diseño del formulario
-        setLocationRelativeTo(null); // Centra la ventana
+        pack();
+        setLocationRelativeTo(null);
 
-        // Programar la acción del botón Ingresar
-        // 1. Botón Ingresar
+
         ingresar.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String usuarioTexto = usuariocompl.getText();
+                String usuarioTexto = usuariocompl.getText().trim();
                 String password = new String(contracompl.getPassword());
 
-                // Validación de campos vacíos
+                // 1. Validación de campos vacíos
                 if (usuarioTexto.isEmpty() || password.isEmpty()) {
                     JOptionPane.showMessageDialog(null, "Debes completar todos los campos", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
                 }
-                // Simulación de acceso como Administrador [1]
-                else if (usuarioTexto.equals("admin") && password.equals("1")) {
+
+                //  Acceso para el Administrador General
+
+                if (usuarioTexto.equals("admin") && password.equals(modelo.Sistema.passwordAdmin)) {
                     JOptionPane.showMessageDialog(null, "¡Bienvenido Administrador!", "Acceso Concedido", JOptionPane.INFORMATION_MESSAGE);
 
-                    // Instanciamos el panel de administración que acabas de terminar
-                    paneladmin ventanaAdmin = new paneladmin();
-
-                    // Lo hacemos visible en pantalla
+                    paneladmin ventanaAdmin = new paneladmin(instituto);
                     ventanaAdmin.setVisible(true);
+                    ventanaAdmin.cargarUsuarios("");
 
-                    // Cerramos y destruimos la ventana de Login para liberar memoria
-                    dispose();
+                    loginadmin.this.setVisible(false);
+                    return;
                 }
-                // Manejo de errores por si ponen otros datos
-                else {
-                    JOptionPane.showMessageDialog(null, "Usuario o contraseña incorrectos.", "Error de Autenticación", JOptionPane.ERROR_MESSAGE);
+
+
+
+                modelo.Usuario usuarioEncontrado = null;
+                for (modelo.Usuario u : instituto.getUsuarios()) {
+                    if (u.getDocumento().equals(usuarioTexto)) {
+                        usuarioEncontrado = u;
+                        break;
+                    }
                 }
+
+
+                if (usuarioEncontrado != null) {
+
+                    if (usuarioEncontrado.getPassword().equals(password)) {
+
+
+                        if (!usuarioEncontrado.isActivo()) {
+                            String motivoSancion = usuarioEncontrado.getMensajeSancion();
+
+                            if (motivoSancion == null || motivoSancion.trim().isEmpty()) {
+                                motivoSancion = "Cuenta deshabilitada por la administración del Instituto.";
+                            }
+
+                            JOptionPane.showMessageDialog(null,
+                                    "🚨 ACCESO DENEGADO 🚨\n\n" +
+                                            "Tu cuenta se encuentra temporalmente deshabilitada.\n" +
+                                            "Motivo de la sanción:\n\"" + motivoSancion + "\"\n\n" +
+                                            "Por favor, comunícate con el Administrador para regularizar tu situación.",
+                                    "Cuenta Bloqueada",
+                                    JOptionPane.ERROR_MESSAGE);
+
+                            return;
+                        }
+
+
+                        if (usuarioEncontrado.getPassword().equals(usuarioEncontrado.getDocumento())) {
+                            JOptionPane.showMessageDialog(null, "Primer acceso detectado. Por seguridad, debe cambiar su contraseña.", "Cambio Obligatorio", JOptionPane.WARNING_MESSAGE);
+
+                            loginadmin.this.setVisible(false);
+
+                            forzado ventanaForzado = new forzado(usuarioEncontrado);
+                            ventanaForzado.setVisible(true);
+                            return;
+                        }
+
+                        if (usuarioEncontrado instanceof modelo.Docente) {
+                            JOptionPane.showMessageDialog(null, "¡Bienvenido Docente: " + usuarioEncontrado.getNombre() + "!", "Acceso Concedido", JOptionPane.INFORMATION_MESSAGE);
+
+                            docente ventanaDocente = new docente(instituto, (modelo.Docente) usuarioEncontrado);
+                            ventanaDocente.setVisible(true);
+
+                        } else if (usuarioEncontrado instanceof modelo.Alumno) {
+                            JOptionPane.showMessageDialog(null, "¡Bienvenido Alumno: " + usuarioEncontrado.getNombre() + "!", "Acceso Concedido", JOptionPane.INFORMATION_MESSAGE);
+
+                            alumno ventanaAlumno = new alumno(instituto, (modelo.Alumno) usuarioEncontrado);
+                            ventanaAlumno.setVisible(true);
+                        }
+
+                        loginadmin.this.setVisible(false);
+                        return;
+
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Contraseña incorrecta.", "Error de Autenticación", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                }
+
+                // 3. Si pasó de largo y no encontró el DNI en la lista
+                JOptionPane.showMessageDialog(null, "El usuario con DNI " + usuarioTexto + " no existe.", "Error de Autenticación", JOptionPane.ERROR_MESSAGE);
             }
         });
-       /* // Programar la acción del botón "Registrar nuevo Usuario" del Login
-        registrar.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                // 1. Creamos una instancia de la ventana de Registro
-                Registro ventanaRegistro = new Registro();
 
-                // 2. La hacemos visible en la pantalla
-                ventanaRegistro.setVisible(true);
-    }
-        });*/
+
+
         cambiarcont.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                // 1. Creamos una instancia de la ventana llamada forzado
-                forzado ventanaForzado = new forzado();
 
-                // 2. La hacemos visible en la pantalla
-                ventanaForzado.setVisible(true);
+                visual.cambioContrasenia ventanaCambio = new visual.cambioContrasenia();
+                ventanaCambio.setVisible(true);
             }
         });
+
     }
 
-
-    // Método Main para iniciar la aplicación correctamente
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            loginadmin ventana = new loginadmin();
-            ventana.setVisible(true);
-        });
-    }
-
-    /**
-     * Method generated by IntelliJ IDEA GUI Designer
-     * >>> IMPORTANT!! <<<
-     * DO NOT edit this method OR call it in your code!
-     *
-     * @noinspection ALL
-     */
-    private void $$$setupUI$$$() {
-        panelPrincipal = new JPanel();
-        panelPrincipal.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(6, 3, new Insets(0, 0, 0, 0), -1, -1));
-        inst = new JLabel();
-        inst.setText("instituto \"Caminemos el Trayecto\"");
-        panelPrincipal.add(inst, new com.intellij.uiDesigner.core.GridConstraints(0, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        login = new JLabel();
-        login.setHorizontalAlignment(11);
-        login.setHorizontalTextPosition(10);
-        login.setText("Login");
-        panelPrincipal.add(login, new com.intellij.uiDesigner.core.GridConstraints(1, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        usuario = new JLabel();
-        usuario.setText("Usuario:");
-        panelPrincipal.add(usuario, new com.intellij.uiDesigner.core.GridConstraints(2, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(59, 95), null, 0, false));
-        ingresar = new JButton();
-        ingresar.setText("Ingresar");
-        panelPrincipal.add(ingresar, new com.intellij.uiDesigner.core.GridConstraints(4, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        contracompl = new JPasswordField();
-        panelPrincipal.add(contracompl, new com.intellij.uiDesigner.core.GridConstraints(3, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        usuariocompl = new JTextField();
-        panelPrincipal.add(usuariocompl, new com.intellij.uiDesigner.core.GridConstraints(2, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        contraseña = new JLabel();
-        contraseña.setText("Contraseña:");
-        panelPrincipal.add(contraseña, new com.intellij.uiDesigner.core.GridConstraints(3, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        cambiarcont = new JButton();
-        cambiarcont.setText("Cambiar Contraseña");
-        panelPrincipal.add(cambiarcont, new com.intellij.uiDesigner.core.GridConstraints(5, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-    }
-
-    /**
-     * @noinspection ALL
-     */
-    public JComponent $$$getRootComponent$$$() {
-        return panelPrincipal;
-    }
-
+/**
+ * Method generated by IntelliJ IDEA GUI Designer
+ * >>> IMPORTANT!! <<<
+ * DO NOT edit this method OR call it in your code!
+ *
+ * @noinspection ALL
+ */
+private void $$$setupUI$$$() {
+    panelPrincipal = new JPanel();
+    panelPrincipal.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(6, 3, new Insets(0, 0, 0, 0), -1, -1));
+    inst = new JLabel();
+    inst.setText("instituto \"Caminemos el Trayecto\"");
+    panelPrincipal.add(inst, new com.intellij.uiDesigner.core.GridConstraints(0, 0, 1, 3, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+    login = new JLabel();
+    login.setHorizontalAlignment(11);
+    login.setHorizontalTextPosition(10);
+    login.setText("Login");
+    panelPrincipal.add(login, new com.intellij.uiDesigner.core.GridConstraints(1, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+    usuario = new JLabel();
+    usuario.setText("Usuario:");
+    panelPrincipal.add(usuario, new com.intellij.uiDesigner.core.GridConstraints(2, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(59, 95), null, 0, false));
+    ingresar = new JButton();
+    ingresar.setText("Ingresar");
+    panelPrincipal.add(ingresar, new com.intellij.uiDesigner.core.GridConstraints(4, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+    contracompl = new JPasswordField();
+    panelPrincipal.add(contracompl, new com.intellij.uiDesigner.core.GridConstraints(3, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+    usuariocompl = new JTextField();
+    panelPrincipal.add(usuariocompl, new com.intellij.uiDesigner.core.GridConstraints(2, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
+    contraseña = new JLabel();
+    contraseña.setText("Contraseña:");
+    panelPrincipal.add(contraseña, new com.intellij.uiDesigner.core.GridConstraints(3, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
+    cambiarcont = new JButton();
+    cambiarcont.setText("Cambiar Contraseña");
+    panelPrincipal.add(cambiarcont, new com.intellij.uiDesigner.core.GridConstraints(5, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
 }
 
+/**
+ * @noinspection ALL
+ */
+public JComponent $$$getRootComponent$$$() {
+    return panelPrincipal;
+}
+
+}

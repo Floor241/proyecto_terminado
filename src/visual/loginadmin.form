@@ -36,12 +36,12 @@
           <text value="Usuario:"/>
         </properties>
       </component>
-      <component id="3accc" class="javax.swing.JButton" binding="ingresar">
+      <component id="3accc" class="javax.swing.JButton" binding="ingresa">
         <constraints>
           <grid row="4" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="0" fill="0" indent="0" use-parent-layout="false"/>
         </constraints>
         <properties>
-          <text value="Ingresar"/>
+          <text value="Ingresarr"/>
         </properties>
       </component>
       <component id="7b461" class="javax.swing.JPasswordField" binding="contracompl">
