@@ -106,7 +106,7 @@ public class Registro extends JFrame {
             }
         });
     }
-    // 5. Método Main provisional para probar el funcionamiento del registro de manera individual
+    // 5.metodo main provisional
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
 
