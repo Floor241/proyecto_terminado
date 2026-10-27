@@ -145,7 +145,7 @@ public class docente extends JFrame {
             tabbeestados.addChangeListener(new ChangeListener() {
                 @Override
                 public void stateChanged(ChangeEvent e) {
-                    actualizarTablasCursos(); // Escanea la RAM en el instante del clic
+                    actualizarTablasCursos();
                 }
             });
         }
@@ -177,17 +177,36 @@ public class docente extends JFrame {
         aprobado.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+
                 int filaCurso = tablahabilitados.getSelectedRow();
                 if (filaCurso == -1) {
                     filaCurso = tablacerrados.getSelectedRow();
                 }
 
-                if (filaCurso == -1 || alumnoSeleccionadoDNI[0].isEmpty()) {
-                    JOptionPane.showMessageDialog(null, "Por favor, seleccione un curso y un alumno inscripto.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+                if (filaCurso == -1) {
+                    JOptionPane.showMessageDialog(null, "Por favor, seleccione un curso en la tabla superior.", "Advertencia", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
 
-                String notaStr = JOptionPane.showInputDialog(null, "Ingrese la nota final del alumno (4 a 10):", "Calificar Aprobado", JOptionPane.QUESTION_MESSAGE);
+                String idCurso = (tablahabilitados.getSelectedRow() != -1) ?
+                        tablahabilitados.getValueAt(tablahabilitados.getSelectedRow(), 0).toString() :
+                        tablacerrados.getValueAt(tablacerrados.getSelectedRow(), 0).toString();
+
+                String dniAlumnoACalificar = "";
+
+                if (tableinscriptos != null && tableinscriptos.getSelectedRow() != -1) {
+                    dniAlumnoACalificar = tableinscriptos.getValueAt(tableinscriptos.getSelectedRow(), 0).toString().trim();
+                } else if (tabledesaprobados != null && tabledesaprobados.getSelectedRow() != -1) {
+                    dniAlumnoACalificar = tabledesaprobados.getValueAt(tabledesaprobados.getSelectedRow(), 0).toString().trim();
+                }
+
+                if (dniAlumnoACalificar.isEmpty()) {
+                    JOptionPane.showMessageDialog(null, "Por favor, haga clic sobre un alumno en la lista de inscriptos o desaprobados.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+
+
+                String notaStr = JOptionPane.showInputDialog(null, "Ingrese la nota final del alumno para aprobar (4 a 10):", "Rectificar a Aprobado", JOptionPane.QUESTION_MESSAGE);
                 if (notaStr == null || notaStr.trim().isEmpty()) return;
 
                 try {
@@ -197,64 +216,92 @@ public class docente extends JFrame {
                         return;
                     }
 
-                    String idCurso = (tablahabilitados.getSelectedRow() != -1) ?
-                            tablahabilitados.getValueAt(tablahabilitados.getSelectedRow(), 0).toString() :
-                            tablacerrados.getValueAt(tablacerrados.getSelectedRow(), 0).toString();
 
-                    for (Curso c : instituto.getCursos()) {
-                        if (c.getId().equals(idCurso)) {
-                            c.getAlumnosInscritos().remove(alumnoSeleccionadoDNI[0]);
-                            c.getAlumnosAprobados().add(alumnoSeleccionadoDNI[0] + " (Nota: " + nota + ")");
+                    if (instituto != null) {
 
-                            JOptionPane.showMessageDialog(null, "El alumno " + alumnoSeleccionadoDNI[0] + " ha sido APROBADO con " + nota);
+                        boolean exitoSQL = instituto.registrarCalificacionAlumno(dniAlumnoACalificar, idCurso, "Aprobado", String.valueOf(nota));
 
-                            alumnoSeleccionadoDNI[0] = "";
-                            actualizarTablasAlumnos(c);
-                            textinscrip.setText(String.valueOf(c.getAlumnosInscritos().size()));
-                            totaldeinscriptos.setText(String.valueOf(c.getAlumnosInscritos().size()));
-                            break;
+                        if (exitoSQL) {
+                            JOptionPane.showMessageDialog(null, "¡Acta rectificada! El alumno " + dniAlumnoACalificar + " ahora está APROBADO con " + nota + ".", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+
+
+                            if (tableinscriptos != null) tableinscriptos.clearSelection();
+                            if (tabledesaprobados != null) tabledesaprobados.clearSelection();
+
+
+                            java.util.ArrayList<Curso> cursosActualizados = instituto.obtenerTodosLosCursosDeBaseDeDatos();
+                            for (Curso c : cursosActualizados) {
+                                if (c.getId().equals(idCurso)) {
+                                    actualizarTablasAlumnos(c);
+                                    textinscrip.setText(String.valueOf(c.getAlumnosInscritos().size()));
+                                    totaldeinscriptos.setText(String.valueOf(c.getAlumnosInscritos().size()));
+                                    break;
+                                }
+                            }
+                        } else {
+                            JOptionPane.showMessageDialog(null, "Error: No se pudo actualizar el estado.", "Error", JOptionPane.ERROR_MESSAGE);
                         }
                     }
                 } catch (NumberFormatException ex) {
-                    JOptionPane.showMessageDialog(null, "Ingrese un número entero válido.", "Error", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(null, "Por favor, ingrese un número entero válido.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         });
-
         desaprobado.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                int filaCurso = tablahabilitados.getSelectedRow();
-                if (filaCurso == -1) {
-                    filaCurso = tablacerrados.getSelectedRow();
-                }
 
-                if (filaCurso == -1 || alumnoSeleccionadoDNI[0].isEmpty()) {
-                    JOptionPane.showMessageDialog(null, "Por favor, seleccione un curso y un alumno inscripto.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+                int filaCurso = tablahabilitados.getSelectedRow();
+                if (filaCurso == -1) filaCurso = tablacerrados.getSelectedRow();
+
+                if (filaCurso == -1) {
+                    JOptionPane.showMessageDialog(null, "Por favor, seleccione un curso en la tabla superior.", "Advertencia", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
-
-                String motivo = JOptionPane.showInputDialog(null, "Ingrese el motivo del desapruebo o nota (1 a 3):", "Calificar Desaprobado", JOptionPane.QUESTION_MESSAGE);
-                if (motivo == null || motivo.trim().isEmpty()) return;
 
                 String idCurso = (tablahabilitados.getSelectedRow() != -1) ?
                         tablahabilitados.getValueAt(tablahabilitados.getSelectedRow(), 0).toString() :
                         tablacerrados.getValueAt(tablacerrados.getSelectedRow(), 0).toString();
 
-                for (Curso c : instituto.getCursos()) {
-                    if (c.getId().equals(idCurso)) {
-                        c.getAlumnosInscritos().remove(alumnoSeleccionadoDNI[0]);
-                        c.getAlumnosDesaprobados().add(alumnoSeleccionadoDNI[0] + " (Motivo: " + motivo + ")");
-                        JOptionPane.showMessageDialog(null, "El alumno " + alumnoSeleccionadoDNI[0] + " ha sido cargado en el Historial de Desaprobados.");
-                        alumnoSeleccionadoDNI[0] = "";
-                        actualizarTablasAlumnos(c);
-                        textinscrip.setText(String.valueOf(c.getAlumnosInscritos().size()));
-                        totaldeinscriptos.setText(String.valueOf(c.getAlumnosInscritos().size()));
-                        break;
+                String dniAlumno = "";
+
+                if (tableinscriptos.getSelectedRow() != -1) {
+                    dniAlumno = tableinscriptos.getValueAt(tableinscriptos.getSelectedRow(), 0).toString().trim();
+                } else if (tableaprobados.getSelectedRow() != -1) {
+                    dniAlumno = tableaprobados.getValueAt(tableaprobados.getSelectedRow(), 0).toString().trim();
+                }
+
+                if (dniAlumno.isEmpty()) {
+                    JOptionPane.showMessageDialog(null, "Por favor, seleccione un alumno de la lista de inscriptos o aprobados para calificar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+
+                String motivo = JOptionPane.showInputDialog(null, "Ingrese el motivo del desaprobado o la nota:", "Calificar Desaprobado / Rectificar", JOptionPane.QUESTION_MESSAGE);
+                if (motivo == null || motivo.trim().isEmpty()) return;
+
+                if (instituto != null) {
+                    boolean exitoSQL = instituto.registrarCalificacionAlumno(dniAlumno, idCurso, "Desaprobado", motivo.trim());
+
+                    if (exitoSQL) {
+                        JOptionPane.showMessageDialog(null, "¡Acta rectificada! El alumno figura como DESAPROBADO.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+
+                        tableinscriptos.clearSelection();
+                        tableaprobados.clearSelection();
+
+                        java.util.ArrayList<Curso> cursosActualizados = instituto.obtenerTodosLosCursosDeBaseDeDatos();
+                        for (Curso c : cursosActualizados) {
+                            if (c.getId().equals(idCurso)) {
+                                actualizarTablasAlumnos(c);
+                                break;
+                            }
+                        }
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Error: No se pudo modificar el registro en la base de datos.", "Error", JOptionPane.ERROR_MESSAGE);
                     }
                 }
             }
         });
+
 
         tablahabilitados.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
             @Override
@@ -267,16 +314,18 @@ public class docente extends JFrame {
 
                         String idCurso = tablahabilitados.getValueAt(filaSeleccionada, 0).toString();
 
-                        for (Curso c : modelo.Sistema.getInstituto().getCursos()) {
+                        for (Curso c : instituto.obtenerTodosLosCursosDeBaseDeDatos()) {
                             if (c.getId().equals(idCurso)) {
+
                                 cursoseleccionado.setText(c.getNombre());
                                 textnombrec.setText(c.getNombre());
                                 textdoc.setText(c.getDocumentoDocente());
-                                textAreadescrip.setText(c.getDescripcion());
+                                textAreadescrip.setText(c.getDescripcion() != null ? c.getDescripcion() : "");
                                 textcupo.setText(String.valueOf(c.getCupoMaximo()));
                                 estado1.setText(c.getEstado());
 
-                                int cantInscriptos = c.getAlumnosInscritos() != null ? c.getAlumnosInscritos().size() : 0;
+
+                                int cantInscriptos = (c.getAlumnosInscritos() != null) ? c.getAlumnosInscritos().size() : 0;
                                 textinscrip.setText(String.valueOf(cantInscriptos));
                                 totaldeinscriptos.setText(String.valueOf(cantInscriptos));
 
@@ -300,16 +349,16 @@ public class docente extends JFrame {
 
                         String idCurso = tablacerrados.getValueAt(filaSeleccionada, 0).toString();
 
-                        for (Curso c : modelo.Sistema.getInstituto().getCursos()) {
+                        for (Curso c : instituto.obtenerTodosLosCursosDeBaseDeDatos()) {
                             if (c.getId().equals(idCurso)) {
+
                                 cursoseleccionado.setText(c.getNombre());
                                 textnombrec.setText(c.getNombre());
                                 textdoc.setText(c.getDocumentoDocente());
-                                textAreadescrip.setText(c.getDescripcion());
+                                textAreadescrip.setText(c.getDescripcion() != null ? c.getDescripcion() : "");
                                 textcupo.setText(String.valueOf(c.getCupoMaximo()));
                                 estado1.setText(c.getEstado());
-
-                                int cantInscriptos = c.getAlumnosInscritos() != null ? c.getAlumnosInscritos().size() : 0;
+                                int cantInscriptos = (c.getAlumnosInscritos() != null) ? c.getAlumnosInscritos().size() : 0;
                                 textinscrip.setText(String.valueOf(cantInscriptos));
                                 totaldeinscriptos.setText(String.valueOf(cantInscriptos));
 
@@ -334,26 +383,31 @@ public class docente extends JFrame {
 
                 String idCurso = tablahabilitados.getValueAt(fila, 0).toString();
 
-                for (Curso c : modelo.Sistema.getInstituto().getCursos()) {
-                    if (c.getId().equals(idCurso)) {
-                        c.setEstado("Cerrado");
+                boolean actualizado = instituto.actualizarEstadoCursoEnBaseDeDatos(idCurso, "Cerrado");
 
-                        JOptionPane.showMessageDialog(null, "Las inscripciones para el curso '" + c.getNombre() + "' han sido cerradas.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                if (actualizado) {
 
-
-                        actualizarTablasCursos();
-                        actualizarContadoresInicio();
-
-
-                        cursoseleccionado.setText("");
-                        textnombrec.setText("");
-                        textdoc.setText("");
-                        textAreadescrip.setText("");
-                        textcupo.setText("");
-                        estado1.setText("");
-                        textinscrip.setText("0");
-                        break;
+                    for (Curso c : instituto.obtenerTodosLosCursosDeBaseDeDatos()) {
+                        if (c.getId().equals(idCurso)) {
+                            JOptionPane.showMessageDialog(null, "Las inscripciones para el curso '" + c.getNombre() + "' han sido cerradas con éxito.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                            break;
+                        }
                     }
+
+                    actualizarTablasCursos();
+                    actualizarContadoresInicio();
+
+
+                    cursoseleccionado.setText("");
+                    textnombrec.setText("");
+                    textdoc.setText("");
+                    textAreadescrip.setText("");
+                    textcupo.setText("");
+                    estado1.setText("");
+                    textinscrip.setText("0");
+
+                } else {
+                    JOptionPane.showMessageDialog(null, " Error: No se pudo actualizar el estado de inscripción .", "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         });
@@ -376,29 +430,36 @@ public class docente extends JFrame {
                     return;
                 }
 
-                for (Curso c : modelo.Sistema.getInstituto().getCursos()) {
-                    if (c.getId().equals(idCurso)) {
-                        c.setEstado("Finalizado");
 
-                        JOptionPane.showMessageDialog(null, "El curso '" + c.getNombre() + "' ha sido finalizado con éxito.");
+                boolean actualizado = instituto.actualizarEstadoCursoEnBaseDeDatos(idCurso, "Finalizado");
 
+                if (actualizado) {
 
-                        actualizarTablasCursos();
-                        actualizarContadoresInicio();
-
-
-                        cursoseleccionado.setText("");
-                        textnombrec.setText("");
-                        textdoc.setText("");
-                        textAreadescrip.setText("");
-                        textcupo.setText("");
-                        estado1.setText("");
-                        textinscrip.setText("0");
-                        break;
+                    for (Curso c : instituto.obtenerTodosLosCursosDeBaseDeDatos()) {
+                        if (c.getId().equals(idCurso)) {
+                            JOptionPane.showMessageDialog(null, "El curso '" + c.getNombre() + "' ha sido finalizado con éxito .");
+                            break;
+                        }
                     }
+
+
+                    actualizarTablasCursos();
+                    actualizarContadoresInicio();
+
+
+                    cursoseleccionado.setText("");
+                    textnombrec.setText("");
+                    textdoc.setText("");
+                    textAreadescrip.setText("");
+                    textcupo.setText("");
+                    estado1.setText("");
+                    textinscrip.setText("0");
+                } else {
+                    JOptionPane.showMessageDialog(null, "Error: No se pudo actualizar el estado.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         });
+
 
         rehabilitarCursoSoloCursosButton.addActionListener(new ActionListener() {
             @Override
@@ -421,31 +482,32 @@ public class docente extends JFrame {
                     return;
                 }
 
+                boolean actualizado = instituto.actualizarEstadoCursoEnBaseDeDatos(idCurso, "Habilitado");
 
-                for (Curso c : modelo.Sistema.getInstituto().getCursos()) {
-                    if (c.getId().equals(idCurso)) {
+                if (actualizado) {
 
-                        c.setEstado("Habilitado");
-
-                        JOptionPane.showMessageDialog(null, "El curso '" + c.getNombre() + "' ha sido rehabilitado correctamente y volvió a estar activo.", "Curso Reactivado", JOptionPane.INFORMATION_MESSAGE);
-
-
-                        actualizarTablasCursos();
-                        actualizarContadoresInicio();
-
-
-                        cursoseleccionado.setText("");
-                        textnombrec.setText("");
-                        textdoc.setText("");
-                        textAreadescrip.setText("");
-                        textcupo.setText("");
-                        estado1.setText("");
-                        textinscrip.setText("0");
-                        break;
+                    for (Curso c : instituto.obtenerTodosLosCursosDeBaseDeDatos()) {
+                        if (c.getId().equals(idCurso)) {
+                            JOptionPane.showMessageDialog(null, "El curso '" + c.getNombre() + "' ha sido rehabilitado correctamente y volvió a estar activo.", "Curso Reactivado", JOptionPane.INFORMATION_MESSAGE);
+                            break;
+                        }
                     }
+
+                    actualizarTablasCursos();
+                    actualizarContadoresInicio();
+                    cursoseleccionado.setText("");
+                    textnombrec.setText("");
+                    textdoc.setText("");
+                    textAreadescrip.setText("");
+                    textcupo.setText("");
+                    estado1.setText("");
+                    textinscrip.setText("0");
+                } else {
+                    JOptionPane.showMessageDialog(null, " Error: No se pudo actualizar el estado de rehabilitación.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         });
+
 
 
         if (tablafinalizados != null) {
@@ -460,20 +522,20 @@ public class docente extends JFrame {
 
                             String idCurso = tablafinalizados.getValueAt(filaSeleccionada, 0).toString();
 
-
-                            for (Curso c : modelo.Sistema.getInstituto().getCursos()) {
+                            for (Curso c : instituto.obtenerTodosLosCursosDeBaseDeDatos()) {
                                 if (c.getId().equals(idCurso)) {
+
                                     cursoseleccionado.setText(c.getNombre());
                                     textnombrec.setText(c.getNombre());
                                     textdoc.setText(c.getDocumentoDocente());
-                                    textAreadescrip.setText(c.getDescripcion());
+                                    textAreadescrip.setText(c.getDescripcion() != null ? c.getDescripcion() : "");
                                     textcupo.setText(String.valueOf(c.getCupoMaximo()));
                                     estado1.setText(c.getEstado());
 
-                                    int cantInscriptos = c.getAlumnosInscritos() != null ? c.getAlumnosInscritos().size() : 0;
+
+                                    int cantInscriptos = (c.getAlumnosInscritos() != null) ? c.getAlumnosInscritos().size() : 0;
                                     textinscrip.setText(String.valueOf(cantInscriptos));
                                     totaldeinscriptos.setText(String.valueOf(cantInscriptos));
-
                                     actualizarTablasAlumnos(c);
                                     break;
                                 }
@@ -483,6 +545,7 @@ public class docente extends JFrame {
                 }
             });
         }
+
 
         if (tablacancelados != null) {
             tablacancelados.getSelectionModel().addListSelectionListener(new ListSelectionListener() {
@@ -513,72 +576,39 @@ public class docente extends JFrame {
         }
 
 
-//solapa configuracion
+        if (guardarcambios != null) {
+            guardarcambios.addActionListener(new ActionListener() {
+                @Override
+                public void actionPerformed(ActionEvent e) {
 
+                    String nuevaContra = new String(passwordnueva.getPassword()).trim();
+                    String confirmarContra = new String(passwordconfirmar.getPassword()).trim();
 
-        guardarcambios.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
+                    if (nuevaContra.isEmpty() || confirmarContra.isEmpty()) {
+                        JOptionPane.showMessageDialog(null, "Por favor, complete todos los campos de nueva contraseña.", "Campos Vacíos", JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
+                    if (!nuevaContra.equals(confirmarContra)) {
+                        JOptionPane.showMessageDialog(null, "Las contraseñas ingresadas no coinciden. Verifique los datos.", "Error de Validación", JOptionPane.ERROR_MESSAGE);
+                        return;
+                    }
+                    String miDni = docenteLogueado.getDocumento();
+                    modelo.Instituto institutoReal = (docente.this.instituto != null) ? docente.this.instituto : modelo.Sistema.getInstituto();
+                    if (institutoReal == null) institutoReal = new modelo.Instituto();
 
-                String passActual = new String(passwordactual.getPassword()).trim();
-                String passNueva = new String(passwordnueva.getPassword()).trim();
-                String passConfirmar = new String(passwordconfirmar.getPassword()).trim();
+                    boolean exito = institutoReal.actualizarContraseniaEnBaseDeDatos(miDni, nuevaContra);
 
-
-                if (passActual.isEmpty() || passNueva.isEmpty() || passConfirmar.isEmpty()) {
-                    JOptionPane.showMessageDialog(null,
-                            "Por favor, complete todos los campos de contraseña del formulario.",
-                            "Campos Incompletos", JOptionPane.WARNING_MESSAGE);
-                    return;
-                }
-
-
-                if (!passActual.equals(docenteLogueado.getPassword())) {
-                    JOptionPane.showMessageDialog(null,
-                            "La contraseña actual ingresada es incorrecta.",
-                            "Error de Validación", JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
-
-
-                if (passActual.equals(passNueva)) {
-                    JOptionPane.showMessageDialog(null,
-                            "La nueva contraseña no puede ser idéntica a la contraseña actual.",
-                            "Advertencia", JOptionPane.WARNING_MESSAGE);
-                    return;
-                }
-
-                if (!passNueva.equals(passConfirmar)) {
-                    JOptionPane.showMessageDialog(null,
-                            "La nueva contraseña no coincide con el campo de confirmación. Verifique los datos.",
-                            "Contraseñas no Coinciden", JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
-
-
-                docenteLogueado.setPassword(passNueva);
-
-                if (modelo.Sistema.getInstituto() != null && modelo.Sistema.getInstituto().getUsuarios() != null) {
-                    for (modelo.Usuario u : modelo.Sistema.getInstituto().getUsuarios()) {
-                        if (u.getDocumento().equals(docenteLogueado.getDocumento())) {
-                            u.setPassword(passNueva); // Sincronizamos la central
-                            u.setDebeCambiarPassword(false); // Rompe el lazo de cambio forzado si venía de un reset
-                            break;
-                        }
+                    if (exito) {
+                        JOptionPane.showMessageDialog(null, "¡Contraseña de Docente modificada con éxito!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                        passwordnueva.setText("");
+                        passwordconfirmar.setText("");
+                        if (passwordactual != null) passwordactual.setText("");
+                    } else {
+                        JOptionPane.showMessageDialog(null, " Error: No se pudo persistir la contraseña.", "Error", JOptionPane.ERROR_MESSAGE);
                     }
                 }
-
-                JOptionPane.showMessageDialog(null,
-                        "¡Tu contraseña de acceso ha sido actualizada con éxito!\nUsa tu nueva clave en el próximo inicio de sesión.",
-                        "Cambio Exitoso", JOptionPane.INFORMATION_MESSAGE);
-
-
-                passwordactual.setText("");
-                passwordnueva.setText("");
-                passwordconfirmar.setText("");
-            }
-        });
-
+            });
+        }
 
         buttoncerrar.addActionListener(new ActionListener() {
             @Override
@@ -613,102 +643,102 @@ public class docente extends JFrame {
         DefaultTableModel modeloFinalizados = new DefaultTableModel(new Object[]{"ID", "Nombre", "Cupo", "Estado"}, 0);
         DefaultTableModel modeloCancelados = new DefaultTableModel(new Object[]{"ID", "Nombre", "Cupo", "Estado"}, 0);
 
-        modeloPropuestos.setRowCount(0);
-        modeloHabilitados.setRowCount(0);
-        modeloCerrados.setRowCount(0);
-        modeloFinalizados.setRowCount(0);
-        modeloCancelados.setRowCount(0);
-
         String dniDocente = docenteLogueado.getDocumento().trim();
 
-        if (this.instituto != null && this.instituto.getCursos() != null) {
-            for (Curso c : modelo.Sistema.getInstituto().getCursos()) {
-                String dniCurso = c.getDocumentoDocente() != null ? c.getDocumentoDocente().trim() : "";
+        if (this.instituto != null) {
+            java.util.ArrayList<Curso> cursosBD = this.instituto.obtenerTodosLosCursosDeBaseDeDatos();
 
-                if (dniCurso.equalsIgnoreCase(dniDocente)) {
-                    Object[] fila = {c.getId(), c.getNombre(), c.getCupoMaximo(), c.getEstado()};
+            if (cursosBD != null) {
+                for (Curso c : cursosBD) {
+                    String dniCurso = c.getDocumentoDocente() != null ? c.getDocumentoDocente().trim() : "";
 
+                    if (dniCurso.equalsIgnoreCase(dniDocente)) {
+                        Object[] fila = {c.getId(), c.getNombre(), c.getCupoMaximo(), c.getEstado()};
+                        String estadoCurso = c.getEstado() != null ? c.getEstado().trim() : "";
 
-                    String estadoCurso = c.getEstado() != null ? c.getEstado().trim() : "";
-
-                    if (estadoCurso.equalsIgnoreCase("Propuesto")) {
-                        modeloPropuestos.addRow(fila);
-                    } else if (estadoCurso.equalsIgnoreCase("Habilitado")) {
-                        modeloHabilitados.addRow(fila);
-                    } else if (estadoCurso.equalsIgnoreCase("Cerrado")) {
-                        modeloCerrados.addRow(fila);
-                    } else if (estadoCurso.equalsIgnoreCase("Finalizado")) {
-                        modeloFinalizados.addRow(fila);
-                    } else if (estadoCurso.equalsIgnoreCase("Cancelado")) {
-                        modeloCancelados.addRow(fila);
+                        if (estadoCurso.equalsIgnoreCase("Propuesto")) {
+                            modeloPropuestos.addRow(fila);
+                        } else if (estadoCurso.equalsIgnoreCase("Habilitado")) {
+                            modeloHabilitados.addRow(fila);
+                        } else if (estadoCurso.equalsIgnoreCase("Cerrado")) {
+                            modeloCerrados.addRow(fila);
+                        } else if (estadoCurso.equalsIgnoreCase("Finalizado")) {
+                            modeloFinalizados.addRow(fila);
+                        } else if (estadoCurso.equalsIgnoreCase("Cancelado")) {
+                            modeloCancelados.addRow(fila);
+                        }
                     }
                 }
             }
         }
 
-        if (tablacursospropuestos != null) {
-            tablacursospropuestos.setModel(modeloPropuestos);
-            tablacursospropuestos.revalidate();
-            tablacursospropuestos.repaint();
-        }
-        if (tablahabilitados != null) {
-            tablahabilitados.setModel(modeloHabilitados);
-            tablahabilitados.revalidate();
-            tablahabilitados.repaint();
-        }
-        if (tablacerrados != null) {
-            tablacerrados.setModel(modeloCerrados);
-            tablacerrados.revalidate();
-            tablacerrados.repaint();
-        }
-        if (tablafinalizados != null) {
-            tablafinalizados.setModel(modeloFinalizados);
-            tablafinalizados.revalidate();
-            tablafinalizados.repaint();
-        }
-        if (tablacancelados != null) {
-            tablacancelados.setModel(modeloCancelados);
-            tablacancelados.revalidate();
-            tablacancelados.repaint();
-        }
+        if (tablacursospropuestos != null) { tablacursospropuestos.setModel(modeloPropuestos); tablacursospropuestos.revalidate(); tablacursospropuestos.repaint(); }
+        if (tablahabilitados != null) { tablahabilitados.setModel(modeloHabilitados); tablahabilitados.revalidate(); tablahabilitados.repaint(); }
+        if (tablacerrados != null) { tablacerrados.setModel(modeloCerrados); tablacerrados.revalidate(); tablacerrados.repaint(); }
+        if (tablafinalizados != null) { tablafinalizados.setModel(modeloFinalizados); tablafinalizados.revalidate(); tablafinalizados.repaint(); }
+        if (tablacancelados != null) { tablacancelados.setModel(modeloCancelados); tablacancelados.revalidate(); tablacancelados.repaint(); }
 
         actualizarContadoresInicio();
     }
 
 
+
     private void actualizarTablasAlumnos(Curso cursoSeleccionado) {
-        DefaultTableModel modeloInscriptos = new DefaultTableModel(new Object[]{"DNI Alumno", "Estado Académico"}, 0);
-        DefaultTableModel modeloAprobados = new DefaultTableModel(new Object[]{"DNI Alumno", "Nota"}, 0);
-        DefaultTableModel modeloDesaprobados = new DefaultTableModel(new Object[]{"DNI Alumno", "Nota"}, 0);
+        DefaultTableModel modeloInscriptos = new DefaultTableModel(new Object[]{"DNI Alumno", "Nombre y Apellido", "Estado Académico"}, 0);
+        DefaultTableModel modeloAprobados = new DefaultTableModel(new Object[]{"DNI Alumno", "Nombre y Apellido", "Nota"}, 0);
+        DefaultTableModel modeloDesaprobados = new DefaultTableModel(new Object[]{"DNI Alumno", "Nombre y Apellido", "Nota"}, 0);
 
         modeloInscriptos.setRowCount(0);
         modeloAprobados.setRowCount(0);
         modeloDesaprobados.setRowCount(0);
 
-        // 1. Cursando regularmente
+
         if (cursoSeleccionado.getAlumnosInscritos() != null) {
             for (String dniAlumno : cursoSeleccionado.getAlumnosInscritos()) {
-                modeloInscriptos.addRow(new Object[]{dniAlumno, "Cursando"});
+                String nombreCompleto = dniAlumno;
+                if (this.instituto != null) {
+                    modelo.Usuario u = this.instituto.buscarUsuarioPorDni(dniAlumno);
+                    if (u != null && u.getNombre() != null) {
+                        nombreCompleto = u.getNombre() + " " + u.getApellido();
+                    }
+                }
+                modeloInscriptos.addRow(new Object[]{dniAlumno, nombreCompleto, "Cursando"});
             }
         }
 
-        // 2. Historial de aprobados
+
         if (cursoSeleccionado.getAlumnosAprobados() != null) {
             for (String registro : cursoSeleccionado.getAlumnosAprobados()) {
                 String[] datos = registro.split(" \\(Nota: ");
-                String dni = datos[0];
-                String nota = datos.length > 1 ? datos[1].replace(")", "") : "-";
-                modeloAprobados.addRow(new Object[]{dni, nota});
+                if (datos.length > 0) {
+                    String dni = datos[0];
+                    String nota = datos.length > 1 ? datos[1].replace(")", "") : "-";
+
+                    String nombreCompleto = dni;
+                    if (this.instituto != null) {
+                        modelo.Usuario u = this.instituto.buscarUsuarioPorDni(dni);
+                        if (u != null && u.getNombre() != null) nombreCompleto = u.getNombre() + " " + u.getApellido();
+                    }
+                    modeloAprobados.addRow(new Object[]{dni, nombreCompleto, nota});
+                }
             }
         }
 
-        // 3. Historial de desaprobados
+
         if (cursoSeleccionado.getAlumnosDesaprobados() != null) {
             for (String registro : cursoSeleccionado.getAlumnosDesaprobados()) {
                 String[] datos = registro.split(" \\(Motivo: ");
-                String dni = datos[0];
-                String motivo = datos.length > 1 ? datos[1].replace(")", "") : "-";
-                modeloDesaprobados.addRow(new Object[]{dni, motivo});
+                if (datos.length > 0) {
+                    String dni = datos[0];
+                    String motivo = datos.length > 1 ? datos[1].replace(")", "") : "-";
+
+                    String nombreCompleto = dni;
+                    if (this.instituto != null) {
+                        modelo.Usuario u = this.instituto.buscarUsuarioPorDni(dni);
+                        if (u != null && u.getNombre() != null) nombreCompleto = u.getNombre() + " " + u.getApellido();
+                    }
+                    modeloDesaprobados.addRow(new Object[]{dni, nombreCompleto, motivo});
+                }
             }
         }
 
@@ -718,7 +748,6 @@ public class docente extends JFrame {
     }
 
 
-    //pestaña de inicio
     public void actualizarContadoresInicio() {
         int habilitados = 0;
         int cerrados = 0;
@@ -730,30 +759,33 @@ public class docente extends JFrame {
         String dniDocente = docenteLogueado.getDocumento().trim();
 
 
-        if (modelo.Sistema.getInstituto() != null && modelo.Sistema.getInstituto().getCursos() != null) {
-            for (Curso c : modelo.Sistema.getInstituto().getCursos()) {
-                String dniCurso = c.getDocumentoDocente() != null ? c.getDocumentoDocente().trim() : "";
+        if (this.instituto != null) {
+            java.util.ArrayList<Curso> cursosBD = this.instituto.obtenerTodosLosCursosDeBaseDeDatos();
 
-                if (dniCurso.equalsIgnoreCase(dniDocente)) {
-                    totalCursosDocente++;
+            if (cursosBD != null) {
+                for (Curso c : cursosBD) {
+                    String dniCurso = c.getDocumentoDocente() != null ? c.getDocumentoDocente().trim() : "";
 
-                    String estado = c.getEstado() != null ? c.getEstado().trim() : "";
+                    if (dniCurso.equalsIgnoreCase(dniDocente)) {
+                        totalCursosDocente++;
 
-                    if (estado.equalsIgnoreCase("Habilitado")) {
-                        habilitados++;
-                    } else if (estado.equalsIgnoreCase("Cerrado")) {
-                        cerrados++;
-                    } else if (estado.equalsIgnoreCase("Finalizado")) {
-                        finalizados++;
-                    } else if (estado.equalsIgnoreCase("Propuesto")) {
-                        propuestos++;
-                    } else if (estado.equalsIgnoreCase("Cancelado")) {
-                        cancelados++;
+                        String estado = c.getEstado() != null ? c.getEstado().trim() : "";
+
+                        if (estado.equalsIgnoreCase("Habilitado")) {
+                            habilitados++;
+                        } else if (estado.equalsIgnoreCase("Cerrado")) {
+                            cerrados++;
+                        } else if (estado.equalsIgnoreCase("Finalizado")) {
+                            finalizados++;
+                        } else if (estado.equalsIgnoreCase("Propuesto")) {
+                            propuestos++;
+                        } else if (estado.equalsIgnoreCase("Cancelado")) {
+                            cancelados++;
+                        }
                     }
                 }
             }
         }
-
 
         canthabilitados.setText(String.valueOf(habilitados));
         cantcerrados.setText(String.valueOf(cerrados));
@@ -762,10 +794,10 @@ public class docente extends JFrame {
         cantcancelados.setText(String.valueOf(cancelados));
         totaldecursos.setText(String.valueOf(totalCursosDocente));
 
-
         panel1.revalidate();
         panel1.repaint();
     }
+
 
 
     /**

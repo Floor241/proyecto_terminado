@@ -65,9 +65,7 @@ public class cursopropuesto extends JFrame {
         cargarListaMaterias();
 
 
-        // ---------------------------------------------------------------------
-        // ACCIÓN DEL BOTÓN: GUARDAR PROPUESTA (Corregido y Cerrado)
-        // ---------------------------------------------------------------------
+
         guardarButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -89,43 +87,42 @@ public class cursopropuesto extends JFrame {
                         return;
                     }
 
-                    // 🌟 UNIFICACIÓN 1: Calculamos el ID desde el motor central real del Sistema
-                    int tamañoListaCentral = 0;
-                    if (modelo.Sistema.getInstituto() != null && modelo.Sistema.getInstituto().getCursos() != null) {
-                        tamañoListaCentral = modelo.Sistema.getInstituto().getCursos().size();
-                    }
+                    modelo.Instituto institutoReal = (cursopropuesto.this.instituto != null) ?
+                            cursopropuesto.this.instituto : modelo.Sistema.getInstituto();
+                    if (institutoReal == null) institutoReal = new modelo.Instituto();
+
+                    int tamañoListaCentral = institutoReal.obtenerTodosLosCursosDeBaseDeDatos().size();
                     String idAutomatico = "C" + (tamañoListaCentral + 1);
 
                     Curso nuevoCurso = new Curso(idAutomatico, nombreCurso, descCurso, cupoMax, docenteLogueado.getDocumento());
                     nuevoCurso.setEstado("Propuesto");
 
+                    institutoReal.agregarCurso(nuevoCurso);
+
+
                     for (Curso corr : correlativasSeleccionadas) {
                         nuevoCurso.agregarCorrelativa(corr.getId());
+
+                        institutoReal.agregarCorrelativaEnBaseDeDatos(idAutomatico, corr.getId());
                     }
 
-                    // 🌟 UNIFICACIÓN 2: Guardamos directo en el motor central real para que lo vean Admin y Alumno
-                    if (modelo.Sistema.getInstituto() != null && modelo.Sistema.getInstituto().getCursos() != null) {
-                        modelo.Sistema.getInstituto().getCursos().add(nuevoCurso);
-                    }
-
-
-                    if (cursopropuesto.this.instituto != null && cursopropuesto.this.instituto.getCursos() != null) {
-                        if (!cursopropuesto.this.instituto.getCursos().contains(nuevoCurso)) {
-                            cursopropuesto.this.instituto.getCursos().add(nuevoCurso);
-                        }
-                    }
-                    // =====================================================================
-
-
-                    // Un solo cartel limpio de confirmación
                     JOptionPane.showMessageDialog(null, "Curso propuesto con éxito. Esperando aprobación del Administrador.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
 
-                    // Refrescamos visualmente la ventana de tu profesor de fondo
+
                     if (ventanaPadre != null) {
                         ventanaPadre.actualizarTablasCursos();
                     }
 
-                    dispose(); // Cerramos la ventana flotante
+
+                    for (Frame frame : Frame.getFrames()) {
+                        if (frame instanceof visual.paneladmin) {
+                            visual.paneladmin adminVentana = (visual.paneladmin) frame;
+                            adminVentana.actualizarTablasAdmin();
+                            System.out.println(" ¡Grilla del Administrador forzada a actualizar con éxito!");
+                        }
+                    }
+
+                    dispose();
 
                 } catch (NumberFormatException ex) {
                     JOptionPane.showMessageDialog(null, "El cupo debe ser un número entero válido.", "Error", JOptionPane.ERROR_MESSAGE);
@@ -136,18 +133,33 @@ public class cursopropuesto extends JFrame {
         });
 
 
+
     }
 
 
     private void cargarListaMaterias() {
         DefaultListModel<Curso> modeloLista = new DefaultListModel<>();
-        // Apuntamos al Sistema global por consistencia
-        if (modelo.Sistema.getInstituto() != null && modelo.Sistema.getInstituto().getCursos() != null) {
-            for (Curso c : modelo.Sistema.getInstituto().getCursos()) {
+
+        modelo.Instituto institutoReal = null;
+        if (cursopropuesto.this.instituto != null) {
+            institutoReal = cursopropuesto.this.instituto;
+        } else if (modelo.Sistema.getInstituto() != null) {
+            institutoReal = modelo.Sistema.getInstituto();
+        } else {
+            institutoReal = new modelo.Instituto();
+        }
+
+        java.util.ArrayList<Curso> cursosBD = institutoReal.obtenerTodosLosCursosDeBaseDeDatos();
+
+        if (cursosBD != null) {
+            for (Curso c : cursosBD) {
+
                 if (c.getEstado() != null && !c.getEstado().equalsIgnoreCase("Cancelado")) {
                     modeloLista.addElement(c);
                 }
             }
         }
+
         listamaterias.setModel(modeloLista);
-    }   }
+    } }
+

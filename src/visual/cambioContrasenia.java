@@ -80,6 +80,7 @@ public class cambioContrasenia extends JFrame {
 
                 Usuario usuarioEncontrado = null;
                 if (Sistema.getInstituto() != null) {
+
                     usuarioEncontrado = Sistema.getInstituto().buscarUsuarioPorDni(dni);
                 }
 
@@ -101,10 +102,17 @@ public class cambioContrasenia extends JFrame {
 
                 usuarioEncontrado.setPassword(passNueva);
 
+
+                if (Sistema.getInstituto() != null) {
+                    Sistema.getInstituto().actualizarContraseniaEnBaseDeDatos(dni, passNueva);
+                }
+
+
                 JOptionPane.showMessageDialog(null, "Contraseña modificada con éxito para el usuario: " + usuarioEncontrado.getNombre() + " " + usuarioEncontrado.getApellido(), "Éxito", JOptionPane.INFORMATION_MESSAGE);
                 dispose();
             }
         });
+
     }
 
 

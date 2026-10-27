@@ -1,18 +1,14 @@
 package visual;
 
 import modelo.Sistema;
+import basededatos.ConexionDB;
 
 public class Main {
     public static void main(String[] args) {
-        // =====================================================================
-        // 🌟 LA REPARACIÓN MAESTRA DEL NÚCLEO CENTRAL DE DATOS:
-        // =====================================================================
-        // Le ordenamos a la memoria estática central que cargue los cursos base
-        if (modelo.Sistema.getInstituto() != null) {
-            modelo.Sistema.getInstituto().cargarCursosDePrueba();
-        }
+        ConexionDB.getConexion();
 
-        // Una vez poblada la RAM compartida, levantamos el Login de forma normal
+        System.out.println("🚀 [Sistema] Inicializando paneles académicos sin borrado de memoria...");
+
         loginadmin login = new loginadmin();
         login.setVisible(true);
     }

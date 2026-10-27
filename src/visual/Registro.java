@@ -50,10 +50,16 @@ public class Registro extends JFrame {
                     return;
                 }
 
-                modelo.Instituto inst = ventanaPadre.getInstituto();
 
-                for (modelo.Usuario u : inst.getUsuarios()) {
-                    if (u.getDocumento().equals(documento)) {
+                modelo.Instituto inst = ventanaPadre.getInstituto();
+                if (inst == null) {
+                    inst = modelo.Sistema.getInstituto();
+                }
+
+
+                java.util.ArrayList<modelo.Usuario> usuariosBD = inst.obtenerTodosLosUsuariosDeBaseDeDatos();
+                for (modelo.Usuario u : usuariosBD) {
+                    if (u.getDocumento().trim().equals(documento)) {
                         JOptionPane.showMessageDialog(null, "Error: Ya existe un usuario registrado con el DNI " + documento, "Usuario Duplicado", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
@@ -64,19 +70,16 @@ public class Registro extends JFrame {
                     modelo.Alumno nuevoAlumno = new modelo.Alumno(nombreTxt, apellidoTxt, documento);
                     nuevoAlumno.setPassword(documento);
 
-                    inst.getUsuarios().add(nuevoAlumno);
-
-                    if (modelo.Sistema.getInstituto() != null) {
-                        modelo.Sistema.getInstituto().agregarUsuario(nuevoAlumno);
+                    if (inst != null) {
+                        inst.agregarUsuario(nuevoAlumno);
                     }
                 } else {
                     modelo.Docente nuevoDocente = new modelo.Docente(nombreTxt, apellidoTxt, documento);
                     nuevoDocente.setPassword(documento);
 
-                    inst.getUsuarios().add(nuevoDocente);
 
-                    if (modelo.Sistema.getInstituto() != null) {
-                        modelo.Sistema.getInstituto().agregarUsuario(nuevoDocente);
+                    if (inst != null) {
+                        inst.agregarUsuario(nuevoDocente);
                     }
                 }
 
@@ -99,6 +102,7 @@ public class Registro extends JFrame {
             }
         });
 
+
         cancelar.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -106,7 +110,7 @@ public class Registro extends JFrame {
             }
         });
     }
-    // 5.metodo main provisional
+
     public static void main(String[] args) {
         SwingUtilities.invokeLater(() -> {
 

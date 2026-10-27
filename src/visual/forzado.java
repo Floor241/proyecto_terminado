@@ -53,40 +53,42 @@ public class forzado extends JFrame {
         guardar.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String documento = doccomplet.getText().trim();
-                String contraNueva = new String(passwordnue.getPassword()).trim();
-                String contraConfirma = new String(passwordconf.getPassword()).trim();
 
+                String nueva = new String(passwordnue.getPassword()).trim();
+                String confirmar = new String(passwordconf.getPassword()).trim();
 
-                if (documento.isEmpty() || contraNueva.isEmpty() || contraConfirma.isEmpty()) {
-                    JOptionPane.showMessageDialog(null, "Debe completar todos los campos.", "Campos Vacíos", JOptionPane.WARNING_MESSAGE);
+                if (nueva.isEmpty() || confirmar.isEmpty()) {
+                    JOptionPane.showMessageDialog(null, "Por favor, complete todos los campos.", "Campos Incompletos", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
 
-                if (!contraNueva.equals(contraConfirma)) {
-                    JOptionPane.showMessageDialog(null, "Las contraseñas no coinciden. Intente de nuevo.", "Error de Coincidencia", JOptionPane.ERROR_MESSAGE);
+                if (!nueva.equals(confirmar)) {
+                    JOptionPane.showMessageDialog(null, "Las contraseñas ingresadas no coinciden.", "Error", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
 
+                String miDni = doccomplet.getText().trim();
 
-                if (usuarioLogueado != null) {
-                    usuarioLogueado.setPassword(contraNueva);
+                modelo.Instituto inst = modelo.Sistema.getInstituto();
+                if (inst == null) inst = new modelo.Instituto();
 
-                    JOptionPane.showMessageDialog(null, "Contraseña actualizada con éxito.\nYa puede iniciar sesión de forma normal.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                boolean exito = inst.actualizarContraseniaEnBaseDeDatos(miDni, nueva);
 
+                if (exito) {
+                    JOptionPane.showMessageDialog(null, "¡Contraseña actualizada con éxito! Por favor, inicie sesión con su nueva clave.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
 
-                    if (loginadmin.instanciaLogin != null) {
-                        loginadmin.instanciaLogin.setVisible(true);
-                    }
+                    visual.loginadmin pantallaLogin = new visual.loginadmin();
+                    pantallaLogin.setVisible(true);
+                    pantallaLogin.setLocationRelativeTo(null);
+
 
                     dispose();
                 } else {
-
-                    JOptionPane.showMessageDialog(null, "Contraseña actualizada con éxito.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                    dispose();
+                    JOptionPane.showMessageDialog(null, " Error: se rechazo la actualización.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         });
+
 
 
         cancelar.addActionListener(new ActionListener() {

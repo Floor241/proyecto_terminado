@@ -11,7 +11,6 @@ import modelo.Usuario;
 
 public class alumno extends JFrame {
 
-
     private JLabel titulo1;
     private JLabel titulo2;
     private JTabbedPane inicio;
@@ -39,18 +38,14 @@ public class alumno extends JFrame {
     private JTextField textemail;
     private JButton guardarcambios;
 
-
     private Instituto instituto;
     private Usuario alumnoLogueado;
-
 
     public alumno(Instituto instituto, Usuario alumnoLogueado) {
         this.instituto = instituto;
         this.alumnoLogueado = alumnoLogueado;
 
-
         $$$setupUI$$$();
-
 
         setTitle("Panel de Control - Alumno");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -62,39 +57,33 @@ public class alumno extends JFrame {
         setSize(1100, 750);
         setLocationRelativeTo(null);
 
-        titulo2.setText("Bienvenido/a, " + alumnoLogueado.getNombre() + " " + alumnoLogueado.getApellido());
+        if (titulo2 != null) {
+            titulo2.setText("Bienvenido/a, " + alumnoLogueado.getNombre() + " " + alumnoLogueado.getApellido());
+        }
         textnombre.setText(alumnoLogueado.getNombre());
         textapellido.setText(alumnoLogueado.getApellido());
-
-
 
         actualizarTablasAlumno();
 
         cerrar.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-
                 int respuesta = JOptionPane.showConfirmDialog(null,
                         "¿Está seguro de que desea cerrar su sesión actual?",
                         "Cerrar Sesión", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 
                 if (respuesta == JOptionPane.YES_OPTION) {
-
-
                     if (loginadmin.instanciaLogin != null) {
                         loginadmin.instanciaLogin.setVisible(true);
                     } else {
-
                         new loginadmin().setVisible(true);
                     }
-
                     dispose();
                 }
             }
         });
 
         buscar.addActionListener(e -> actualizarTablasAlumno());
-
 
         inscribirse.addActionListener(new ActionListener() {
             @Override
@@ -106,45 +95,60 @@ public class alumno extends JFrame {
                 }
 
                 String idCurso = tablacursosdisponibles.getValueAt(filaSel, 0).toString();
+                String miDni = alumnoLogueado.getDocumento();
 
-                if (modelo.Sistema.getInstituto() != null && modelo.Sistema.getInstituto().getCursos() != null) {
-                    for (Curso c : modelo.Sistema.getInstituto().getCursos()) {
+                if (instituto != null) {
+                    java.util.ArrayList<Curso> cursosBD = instituto.obtenerTodosLosCursosDeBaseDeDatos();
+                    for (Curso c : cursosBD) {
                         if (c.getId().equals(idCurso)) {
 
-                         //excepcion
-                            if (c.getAlumnosInscritos().size() >= c.getCupoMaximo()) {
+                            int inscritosAct = (c.getAlumnosInscritos() != null) ? c.getAlumnosInscritos().size() : 0;
+                            if (inscritosAct >= c.getCupoMaximo()) {
                                 try {
-
                                     throw new excepciones.CupoMaximoException("Lo sentimos, el cupo para este curso está completo.");
                                 } catch (excepciones.CupoMaximoException ex) {
-
                                     JOptionPane.showMessageDialog(null, ex.getMessage(), "Cupo Lleno", JOptionPane.ERROR_MESSAGE);
                                     return;
                                 }
                             }
 
-                           //excepcioncorrelativas
-                            if (alumnoLogueado instanceof modelo.Alumno) {
-                                modelo.Alumno alumno = (modelo.Alumno) alumnoLogueado;
+                            if (c.getIdsCorrelativas() != null && !c.getIdsCorrelativas().isEmpty()) {
+                                for (String idCorr : c.getIdsCorrelativas()) {
+                                    boolean correlativaAprobadaReal = false;
+                                    String idCorrLimpio = idCorr.trim();
 
-                                if (alumno.getAprobados() != null && c.getIdsCorrelativas() != null) {
+                                    for (Curso cAux : cursosBD) {
+                                        if (cAux.getId().trim().equalsIgnoreCase(idCorrLimpio) && cAux.getAlumnosAprobados() != null) {
+                                            for (String reg : cAux.getAlumnosAprobados()) {
+                                                if (reg != null && reg.trim().startsWith(miDni)) {
+                                                    correlativaAprobadaReal = true;
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                        if (correlativaAprobadaReal) break;
+                                    }
 
-                                    if (!alumno.getAprobados().containsAll(c.getIdsCorrelativas())) {
+                                    if (!correlativaAprobadaReal) {
                                         try {
                                             throw new excepciones.CorrelativasNoCumplidasException("No cumples con los cursos previos requeridos para anotarte.");
                                         } catch (excepciones.CorrelativasNoCumplidasException ex) {
                                             JOptionPane.showMessageDialog(null, ex.getMessage(), "Requisitos Insuficientes", JOptionPane.WARNING_MESSAGE);
-                                            return; // Frenamos la inscripción de forma segura
+                                            return;
                                         }
                                     }
                                 }
                             }
 
-                            if (!c.getAlumnosInscritos().contains(alumnoLogueado.getDocumento())) {
-                                c.getAlumnosInscritos().add(alumnoLogueado.getDocumento());
-                                JOptionPane.showMessageDialog(null, "¡Inscripción procesada con éxito!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                            if (c.getAlumnosInscritos() == null || !c.getAlumnosInscritos().contains(alumnoLogueado.getDocumento())) {
+                                boolean exitoSQL = instituto.inscribirAlumnoEnBaseDeDatos(alumnoLogueado.getDocumento(), idCurso);
 
-                                actualizarTablasAlumno();
+                                if (exitoSQL) {
+                                    JOptionPane.showMessageDialog(null, "¡Inscripción procesada con éxito !", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                                    actualizarTablasAlumno();
+                                } else {
+                                    JOptionPane.showMessageDialog(null, "⚠️ Error: No se pudo registrar la inscripción .", "Error", JOptionPane.ERROR_MESSAGE);
+                                }
                             } else {
                                 JOptionPane.showMessageDialog(null, "Ya te encuentras inscripto en esta materia.", "Aviso", JOptionPane.INFORMATION_MESSAGE);
                             }
@@ -158,35 +162,35 @@ public class alumno extends JFrame {
         guardar.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                String actual = new String(contraactual.getPassword()).trim();
-                String nueva = new String(nuevacontra.getPassword()).trim();
-                String confirma = new String(confirmarcontra.getPassword()).trim();
+                String nuevaContra = new String(nuevacontra.getPassword()).trim();
+                String confirmarContra = new String(confirmarcontra.getPassword()).trim();
 
-                if (actual.isEmpty() || nueva.isEmpty() || confirma.isEmpty()) {
-                    JOptionPane.showMessageDialog(null, "Por favor, complete todos los campos de contraseña.", "Campos Incompletos", JOptionPane.WARNING_MESSAGE);
+                if (nuevaContra.isEmpty() || confirmarContra.isEmpty()) {
+                    JOptionPane.showMessageDialog(null, "Por favor, complete los campos de nueva contraseña.", "Campos Vacíos", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                if (!nuevaContra.equals(confirmarContra)) {
+                    JOptionPane.showMessageDialog(null, "Las contraseñas ingresadas no coinciden. Verifique los datos.", "Error de Validación", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
 
-                if (!alumnoLogueado.getPassword().equals(actual)) {
-                    JOptionPane.showMessageDialog(null, "La contraseña actual introducida es incorrecta.", "Error de Validación", JOptionPane.ERROR_MESSAGE);
-                    return;
+                String miDni = alumnoLogueado.getDocumento();
+                modelo.Instituto institutoReal = (alumno.this.instituto != null) ? alumno.this.instituto : modelo.Sistema.getInstituto();
+                if (institutoReal == null) institutoReal = new modelo.Instituto();
+
+                boolean exito = institutoReal.actualizarContraseniaEnBaseDeDatos(miDni, nuevaContra);
+
+                if (exito) {
+                    JOptionPane.showMessageDialog(null, "¡Tu contraseña ha sido modificada con éxito en la Base de Datos!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                    nuevacontra.setText("");
+                    confirmarcontra.setText("");
+                    if (contraactual != null) contraactual.setText("");
+                } else {
+                    JOptionPane.showMessageDialog(null, "⚠️ Error: No se pudo actualizar la contraseña en MySQL Workbench.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
-
-
-                if (!nueva.equals(confirma)) {
-                    JOptionPane.showMessageDialog(null, "La nueva contraseña y su confirmación no coinciden.", "Error de Coincidencia", JOptionPane.ERROR_MESSAGE);
-                    return;
-                }
-
-
-                alumnoLogueado.setPassword(nueva);
-                contraactual.setText("");
-                nuevacontra.setText("");
-                confirmarcontra.setText("");
-
-                JOptionPane.showMessageDialog(null, "Contraseña modificada con éxito para los próximos accesos.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
             }
         });
+
 
         if (guardarcambios != null) {
             guardarcambios.addActionListener(new ActionListener() {
@@ -200,31 +204,38 @@ public class alumno extends JFrame {
                         return;
                     }
 
+                    String sql = "UPDATE usuarios SET nombre = ?, apellido = ? WHERE TRIM(documento) = ?";
+                    try (java.sql.Connection con = basededatos.ConexionDB.getConexion();
+                         java.sql.PreparedStatement ps = con.prepareStatement(sql)) {
 
-                    alumnoLogueado.setNombre(nuevoNombre);
-                    alumnoLogueado.setApellido(nuevoApellido);
-                    titulo2.setText("Bienvenido/a, " + alumnoLogueado.getNombre() + " " + alumnoLogueado.getApellido());
+                        ps.setString(1, nuevoNombre);
+                        ps.setString(2, nuevoApellido);
+                        ps.setString(3, alumnoLogueado.getDocumento().trim());
 
-                    JOptionPane.showMessageDialog(null, "Datos personales actualizados correctamente en la memoria del sistema.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                        int filasAfectadas = ps.executeUpdate();
+                        if (filasAfectadas > 0) {
+                            alumnoLogueado.setNombre(nuevoNombre);
+                            alumnoLogueado.setApellido(nuevoApellido);
+                            if (titulo2 != null) {
+                                titulo2.setText("Bienvenido/a, " + alumnoLogueado.getNombre() + " " + alumnoLogueado.getApellido());
+                            }
+                            JOptionPane.showMessageDialog(null, "¡Datos personales actualizados correctamente!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                        } else {
+                            JOptionPane.showMessageDialog(null, " No se detectaron cambios o el usuario no existe .", "Aviso", JOptionPane.WARNING_MESSAGE);
+                        }
+                    } catch (java.sql.SQLException ex) {
+                        JOptionPane.showMessageDialog(null, " Error crítico al intentar guardar los cambios.", "Error", JOptionPane.ERROR_MESSAGE);
+                        ex.printStackTrace();
+                    }
                 }
             });
         }
 
         if (inicio != null) {
-            inicio.addChangeListener(e -> {
-                actualizarTablasAlumno();
-            });
+            inicio.addChangeListener(e -> actualizarTablasAlumno());
         }
-
-
-        SwingUtilities.invokeLater(new Runnable() {
-            @Override
-            public void run() {
-                actualizarTablasAlumno();
-            }
-        });
-
     }
+
 
 
     public void actualizarTablasAlumno() {
@@ -236,62 +247,61 @@ public class alumno extends JFrame {
         String busqueda = textbuscar.getText().toLowerCase().trim();
         String miDni = alumnoLogueado.getDocumento();
 
+        if (this.instituto != null) {
+            java.util.ArrayList<Curso> cursosBD = this.instituto.obtenerTodosLosCursosDeBaseDeDatos();
+            if (cursosBD != null) {
+                for (Curso c : cursosBD) {
+                    String profe = c.getDocumentoDocente();
+                    Usuario u = this.instituto.buscarUsuarioPorDni(c.getDocumentoDocente());
+                    if (u != null) profe = u.getNombre() + " " + u.getApellido();
 
-        if (modelo.Sistema.getInstituto() != null && modelo.Sistema.getInstituto().getCursos() != null) {
-            for (Curso c : modelo.Sistema.getInstituto().getCursos()) {
+                    boolean yaInscripto = false;
+                    if (c.getAlumnosInscritos() != null && c.getAlumnosInscritos().contains(miDni)) {
+                        modelInscripto.addRow(new Object[]{c.getId(), c.getNombre(), profe, c.getEstado()});
+                        yaInscripto = true;
+                    }
 
-                String profe = c.getDocumentoDocente();
-                Usuario u = modelo.Sistema.getInstituto().buscarUsuarioPorDni(c.getDocumentoDocente());
-                if (u != null) profe = u.getNombre() + " " + u.getApellido();
-
-
-                boolean yaInscripto = false;
-                if (c.getAlumnosInscritos() != null && c.getAlumnosInscritos().contains(miDni)) {
-                    modelInscripto.addRow(new Object[]{c.getId(), c.getNombre(), profe, c.getEstado()});
-                    yaInscripto = true;
-                }
-
-
-                boolean esAprobado = false;
-                boolean esDesaprobado = false;
-
-                if (c.getAlumnosAprobados() != null) {
-                    for (String reg : c.getAlumnosAprobados()) {
-                        if (reg != null && reg.trim().startsWith(miDni)) {
-                            modelAprobado.addRow(new Object[]{c.getId(), c.getNombre(), "Aprobado"});
-                            esAprobado = true;
-                            break;
+                    boolean esAprobado = false;
+                    if (c.getAlumnosAprobados() != null) {
+                        for (String reg : c.getAlumnosAprobados()) {
+                            if (reg != null && reg.trim().startsWith(miDni)) {
+                                String notaFinal = "Aprobado";
+                                String[] splitNota = reg.split(java.util.regex.Pattern.quote(" (Nota: "));
+                                if (splitNota.length > 1) {
+                                    notaFinal = "Aprobado (Nota: " + splitNota[1].replace(")", "") + ")";
+                                }
+                                modelAprobado.addRow(new Object[]{c.getId(), c.getNombre(), notaFinal});
+                                esAprobado = true;
+                                break;
+                            }
                         }
                     }
-                }
 
-                if (!esAprobado && c.getAlumnosDesaprobados() != null) {
-                    for (String reg : c.getAlumnosDesaprobados()) {
-                        if (reg != null && reg.trim().startsWith(miDni)) {
-                            modelDesaprobado.addRow(new Object[]{c.getId(), c.getNombre(), "Desaprobado"});
-                            esDesaprobado = true;
-                            break;
+                    boolean esDesaprobado = false;
+                    if (!esAprobado && c.getAlumnosDesaprobados() != null) {
+                        for (String reg : c.getAlumnosDesaprobados()) {
+                            if (reg != null && reg.trim().startsWith(miDni)) {
+                                String motivoFinal = "Desaprobado";
+                                String[] splitMotivo = reg.split(java.util.regex.Pattern.quote(" (Motivo: "));
+                                if (splitMotivo.length > 1) {
+                                    motivoFinal = "Desaprobado (" + splitMotivo[1].replace(")", "") + ")";
+                                }
+                                modelDesaprobado.addRow(new Object[]{c.getId(), c.getNombre(), motivoFinal});
+                                esDesaprobado = true;
+                                break;
+                            }
                         }
                     }
-                }
 
-
-                if (!yaInscripto && !esAprobado && !esDesaprobado) {
-                    String estadoCurso = c.getEstado() != null ? c.getEstado().trim() : "";
-
-
-                    if (estadoCurso.equalsIgnoreCase("Habilitado") || estadoCurso.equalsIgnoreCase("Propuesto")) {
-
-                        if (busqueda.isEmpty() || c.getNombre().toLowerCase().contains(busqueda) || c.getId().toLowerCase().contains(busqueda)) {
-
-                            boolean cumpleCorrelativas = true;
-
-                            if (c.getIdsCorrelativas() != null && !c.getIdsCorrelativas().isEmpty()) {
-                                for (String idCorr : c.getIdsCorrelativas()) {
-                                    boolean correlativaPasada = false;
-
-                                    if (modelo.Sistema.getInstituto().getCursos() != null) {
-                                        for (Curso cAux : modelo.Sistema.getInstituto().getCursos()) {
+                    if (!yaInscripto && !esAprobado && !esDesaprobado) {
+                        String estadoCurso = c.getEstado() != null ? c.getEstado().trim() : "";
+                        if (estadoCurso.equalsIgnoreCase("Habilitado")) {
+                            if (busqueda.isEmpty() || c.getNombre().toLowerCase().contains(busqueda) || c.getId().toLowerCase().contains(busqueda)) {
+                                boolean cumpleCorrelativas = true;
+                                if (c.getIdsCorrelativas() != null && !c.getIdsCorrelativas().isEmpty()) {
+                                    for (String idCorr : c.getIdsCorrelativas()) {
+                                        boolean correlativaPasada = false;
+                                        for (Curso cAux : cursosBD) {
                                             if (cAux.getId().equals(idCorr) && cAux.getAlumnosAprobados() != null) {
                                                 for (String reg : cAux.getAlumnosAprobados()) {
                                                     if (reg != null && reg.trim().startsWith(miDni)) {
@@ -302,49 +312,36 @@ public class alumno extends JFrame {
                                             }
                                             if (correlativaPasada) break;
                                         }
-                                    }
-
-                                    if (!correlativaPasada) {
-                                        cumpleCorrelativas = false;
-                                        break;
+                                        if (!correlativaPasada) {
+                                            cumpleCorrelativas = false;
+                                            break;
+                                        }
                                     }
                                 }
-                            }
-
-
-                            if (cumpleCorrelativas) {
-                                int inscritosAct = c.getAlumnosInscritos() != null ? c.getAlumnosInscritos().size() : 0;
-                                int vacantes = c.getCupoMaximo() - inscritosAct;
-
-                                modelDisponible.addRow(new Object[]{
-                                        c.getId(),
-                                        c.getNombre(),
-                                        vacantes + " / " + c.getCupoMaximo(),
-                                        profe
-                                });
+                                if (cumpleCorrelativas) {
+                                    int inscritosAct = c.getAlumnosInscritos() != null ? c.getAlumnosInscritos().size() : 0;
+                                    int vacantes = c.getCupoMaximo() - inscritosAct;
+                                    modelDisponible.addRow(new Object[]{c.getId(), c.getNombre(), vacantes + " / " + c.getCupoMaximo(), profe});
+                                }
                             }
                         }
                     }
                 }
             }
         }
-
-
         if (cursosinscripto != null) cursosinscripto.setModel(modelInscripto);
         if (tablacursosdisponibles != null) tablacursosdisponibles.setModel(modelDisponible);
         if (tablacursosaprobados != null) tablacursosaprobados.setModel(modelAprobado);
         if (tabladesaprobados != null) tabladesaprobados.setModel(modelDesaprobado);
     }
 
-
-
     /**
-     * Method generated by IntelliJ IDEA GUI Designer
-     * >>> IMPORTANT!! <<<
-     * DO NOT edit this method OR call it in your code!
-     *
-     * @noinspection ALL
-     */
+                         * Method generated by IntelliJ IDEA GUI Designer
+                         * >>> IMPORTANT!! <<<
+                         * DO NOT edit this method OR call it in your code!
+                         *
+                         * @noinspection ALL
+                         */
     private void $$$setupUI$$$() {
         final JPanel panel1 = new JPanel();
         panel1.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(3, 3, new Insets(0, 0, 0, 0), -1, -1));

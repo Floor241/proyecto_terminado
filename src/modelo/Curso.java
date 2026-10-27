@@ -7,7 +7,7 @@ public class Curso {
     private String nombre;
     private String descripcion;
     private int cupoMaximo;
-    private String estado; // "Propuesto", "Habilitado", "Cerrado", "Finalizado", "Cancelado"
+    private String estado;
     private String documentoDocente;
 
     private ArrayList<String> alumnosInscritos;
@@ -15,7 +15,6 @@ public class Curso {
     private ArrayList<String> alumnosAprobados;
     private ArrayList<String> alumnosDesaprobados;
     private ArrayList<String> correlativas = new ArrayList<>();
-
 
     public Curso(String id, String nombre, String descripcion, int cupoMaximo, String documentoDocente) {
         this.id = id;
@@ -66,9 +65,6 @@ public class Curso {
         return this.idsCorrelativas;
     }
 
-
-
-
     public ArrayList<String> getCorrelativas() {
         if (this.correlativas == null) {
             this.correlativas = new ArrayList<>();
@@ -85,6 +81,6 @@ public class Curso {
 
     @Override
     public String toString() {
-        return this.nombre;
+        return "[" + this.id + "] " + this.nombre;
     }
 }

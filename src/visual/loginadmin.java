@@ -41,79 +41,54 @@ public class loginadmin extends JFrame {
                 String usuarioTexto = usuariocompl.getText().trim();
                 String password = new String(contracompl.getPassword());
 
-                // 1. Validación de campos vacíos
+
                 if (usuarioTexto.isEmpty() || password.isEmpty()) {
                     JOptionPane.showMessageDialog(null, "Debes completar todos los campos", "Error", JOptionPane.ERROR_MESSAGE);
                     return;
                 }
 
-                //  Acceso para el Administrador General
-
-                if (usuarioTexto.equals("admin") && password.equals(modelo.Sistema.passwordAdmin)) {
-                    JOptionPane.showMessageDialog(null, "¡Bienvenido Administrador!", "Acceso Concedido", JOptionPane.INFORMATION_MESSAGE);
-
-                    paneladmin ventanaAdmin = new paneladmin(instituto);
-                    ventanaAdmin.setVisible(true);
-                    ventanaAdmin.cargarUsuarios("");
-
-                    loginadmin.this.setVisible(false);
-                    return;
-                }
-
-
-
-                modelo.Usuario usuarioEncontrado = null;
-                for (modelo.Usuario u : instituto.getUsuarios()) {
-                    if (u.getDocumento().equals(usuarioTexto)) {
-                        usuarioEncontrado = u;
-                        break;
-                    }
-                }
-
+                modelo.Usuario usuarioEncontrado = instituto.buscarUsuarioPorDni(usuarioTexto);
 
                 if (usuarioEncontrado != null) {
 
                     if (usuarioEncontrado.getPassword().equals(password)) {
 
-
                         if (!usuarioEncontrado.isActivo()) {
                             String motivoSancion = usuarioEncontrado.getMensajeSancion();
-
                             if (motivoSancion == null || motivoSancion.trim().isEmpty()) {
                                 motivoSancion = "Cuenta deshabilitada por la administración del Instituto.";
                             }
-
                             JOptionPane.showMessageDialog(null,
-                                    "🚨 ACCESO DENEGADO 🚨\n\n" +
+                                    " ACCESO DENEGADO \n\n" +
                                             "Tu cuenta se encuentra temporalmente deshabilitada.\n" +
                                             "Motivo de la sanción:\n\"" + motivoSancion + "\"\n\n" +
                                             "Por favor, comunícate con el Administrador para regularizar tu situación.",
                                     "Cuenta Bloqueada",
                                     JOptionPane.ERROR_MESSAGE);
-
                             return;
                         }
 
-
                         if (usuarioEncontrado.getPassword().equals(usuarioEncontrado.getDocumento())) {
                             JOptionPane.showMessageDialog(null, "Primer acceso detectado. Por seguridad, debe cambiar su contraseña.", "Cambio Obligatorio", JOptionPane.WARNING_MESSAGE);
-
                             loginadmin.this.setVisible(false);
-
                             forzado ventanaForzado = new forzado(usuarioEncontrado);
                             ventanaForzado.setVisible(true);
                             return;
                         }
 
-                        if (usuarioEncontrado instanceof modelo.Docente) {
+                        if (usuarioTexto.equals("admin") || usuarioEncontrado.getNombre().equalsIgnoreCase("Administrador")) {
+                            JOptionPane.showMessageDialog(null, "¡Bienvenido Administrador!", "Acceso Concedido", JOptionPane.INFORMATION_MESSAGE);
+                            paneladmin ventanaAdmin = new paneladmin(instituto);
+                            ventanaAdmin.setVisible(true);
+                            ventanaAdmin.cargarUsuarios("");
+                        }
+                        else if (usuarioEncontrado instanceof modelo.Docente) {
                             JOptionPane.showMessageDialog(null, "¡Bienvenido Docente: " + usuarioEncontrado.getNombre() + "!", "Acceso Concedido", JOptionPane.INFORMATION_MESSAGE);
-
                             docente ventanaDocente = new docente(instituto, (modelo.Docente) usuarioEncontrado);
                             ventanaDocente.setVisible(true);
-
-                        } else if (usuarioEncontrado instanceof modelo.Alumno) {
+                        }
+                        else {
                             JOptionPane.showMessageDialog(null, "¡Bienvenido Alumno: " + usuarioEncontrado.getNombre() + "!", "Acceso Concedido", JOptionPane.INFORMATION_MESSAGE);
-
                             alumno ventanaAlumno = new alumno(instituto, (modelo.Alumno) usuarioEncontrado);
                             ventanaAlumno.setVisible(true);
                         }
@@ -127,10 +102,12 @@ public class loginadmin extends JFrame {
                     }
                 }
 
-                // 3. Si pasó de largo y no encontró el DNI en la lista
-                JOptionPane.showMessageDialog(null, "El usuario con DNI " + usuarioTexto + " no existe.", "Error de Autenticación", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(null, "El usuario con DNI/Código '" + usuarioTexto + "' no existe en el sistema.", "Error de Autenticación", JOptionPane.ERROR_MESSAGE);
             }
         });
+
+
+
 
 
 

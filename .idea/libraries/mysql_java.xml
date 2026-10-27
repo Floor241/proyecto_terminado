@@ -1,0 +1,10 @@
+<component name="libraryTable">
+  <library name="mysql java">
+    <CLASSES>
+      <root url="file://$USER_HOME$/Downloads/mysql java" />
+    </CLASSES>
+    <JAVADOC />
+    <SOURCES />
+    <jarDirectory url="file://$USER_HOME$/Downloads/mysql java" recursive="false" />
+  </library>
+</component>
