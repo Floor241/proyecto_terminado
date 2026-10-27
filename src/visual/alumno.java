@@ -5,8 +5,14 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.ArrayList;
+import java.util.regex.Pattern;
+
+import excepciones.CorrelativasNoCumplidasException;
+import excepciones.CupoMaximoException;
 import modelo.Instituto;
 import modelo.Curso;
+import modelo.Sistema;
 import modelo.Usuario;
 
 public class alumno extends JFrame {
@@ -35,7 +41,7 @@ public class alumno extends JFrame {
     private JButton cerrar;
     private JTextField textnombre;
     private JTextField textapellido;
-    private JTextField textemail;
+
     private JButton guardarcambios;
 
     private Instituto instituto;
@@ -98,15 +104,15 @@ public class alumno extends JFrame {
                 String miDni = alumnoLogueado.getDocumento();
 
                 if (instituto != null) {
-                    java.util.ArrayList<Curso> cursosBD = instituto.obtenerTodosLosCursosDeBaseDeDatos();
+                    ArrayList<Curso> cursosBD = instituto.obtenerTodosLosCursosDeBaseDeDatos();
                     for (Curso c : cursosBD) {
                         if (c.getId().equals(idCurso)) {
 
                             int inscritosAct = (c.getAlumnosInscritos() != null) ? c.getAlumnosInscritos().size() : 0;
                             if (inscritosAct >= c.getCupoMaximo()) {
                                 try {
-                                    throw new excepciones.CupoMaximoException("Lo sentimos, el cupo para este curso está completo.");
-                                } catch (excepciones.CupoMaximoException ex) {
+                                    throw new CupoMaximoException("Lo sentimos, el cupo para este curso está completo.");
+                                } catch (CupoMaximoException ex) {
                                     JOptionPane.showMessageDialog(null, ex.getMessage(), "Cupo Lleno", JOptionPane.ERROR_MESSAGE);
                                     return;
                                 }
@@ -131,8 +137,8 @@ public class alumno extends JFrame {
 
                                     if (!correlativaAprobadaReal) {
                                         try {
-                                            throw new excepciones.CorrelativasNoCumplidasException("No cumples con los cursos previos requeridos para anotarte.");
-                                        } catch (excepciones.CorrelativasNoCumplidasException ex) {
+                                            throw new CorrelativasNoCumplidasException("No cumples con los cursos previos requeridos para anotarte.");
+                                        } catch (CorrelativasNoCumplidasException ex) {
                                             JOptionPane.showMessageDialog(null, ex.getMessage(), "Requisitos Insuficientes", JOptionPane.WARNING_MESSAGE);
                                             return;
                                         }
@@ -175,8 +181,8 @@ public class alumno extends JFrame {
                 }
 
                 String miDni = alumnoLogueado.getDocumento();
-                modelo.Instituto institutoReal = (alumno.this.instituto != null) ? alumno.this.instituto : modelo.Sistema.getInstituto();
-                if (institutoReal == null) institutoReal = new modelo.Instituto();
+                Instituto institutoReal = (alumno.this.instituto != null) ? alumno.this.instituto : Sistema.getInstituto();
+                if (institutoReal == null) institutoReal = new Instituto();
 
                 boolean exito = institutoReal.actualizarContraseniaEnBaseDeDatos(miDni, nuevaContra);
 
@@ -204,38 +210,41 @@ public class alumno extends JFrame {
                         return;
                     }
 
-                    String sql = "UPDATE usuarios SET nombre = ?, apellido = ? WHERE TRIM(documento) = ?";
-                    try (java.sql.Connection con = basededatos.ConexionDB.getConexion();
-                         java.sql.PreparedStatement ps = con.prepareStatement(sql)) {
+                    Instituto inst = Sistema.getInstituto();
+                    if (inst == null) inst = new Instituto();
 
-                        ps.setString(1, nuevoNombre);
-                        ps.setString(2, nuevoApellido);
-                        ps.setString(3, alumnoLogueado.getDocumento().trim());
 
-                        int filasAfectadas = ps.executeUpdate();
-                        if (filasAfectadas > 0) {
-                            alumnoLogueado.setNombre(nuevoNombre);
-                            alumnoLogueado.setApellido(nuevoApellido);
-                            if (titulo2 != null) {
-                                titulo2.setText("Bienvenido/a, " + alumnoLogueado.getNombre() + " " + alumnoLogueado.getApellido());
-                            }
-                            JOptionPane.showMessageDialog(null, "¡Datos personales actualizados correctamente!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                        } else {
-                            JOptionPane.showMessageDialog(null, " No se detectaron cambios o el usuario no existe .", "Aviso", JOptionPane.WARNING_MESSAGE);
+                    boolean exito = inst.modificarUsuarioEnBaseDeDatos(
+                            alumnoLogueado.getDocumento().trim(),
+                            nuevoNombre,
+                            nuevoApellido,
+                            "Alumno"
+                    );
+
+                    if (exito) {
+
+                        alumnoLogueado.setNombre(nuevoNombre);
+                        alumnoLogueado.setApellido(nuevoApellido);
+
+
+                        if (titulo2 != null) {
+                            titulo2.setText("Bienvenido/a, " + alumnoLogueado.getNombre() + " " + alumnoLogueado.getApellido());
                         }
-                    } catch (java.sql.SQLException ex) {
-                        JOptionPane.showMessageDialog(null, " Error crítico al intentar guardar los cambios.", "Error", JOptionPane.ERROR_MESSAGE);
-                        ex.printStackTrace();
+
+                        JOptionPane.showMessageDialog(null, "¡Datos personales actualizados correctamente!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                    } else {
+                        JOptionPane.showMessageDialog(null, " Error: La API PHP rechazó la actualización de tus datos.", "Error del Servidor", JOptionPane.ERROR_MESSAGE);
                     }
                 }
             });
+
+
         }
 
         if (inicio != null) {
             inicio.addChangeListener(e -> actualizarTablasAlumno());
         }
     }
-
 
 
     public void actualizarTablasAlumno() {
@@ -248,7 +257,7 @@ public class alumno extends JFrame {
         String miDni = alumnoLogueado.getDocumento();
 
         if (this.instituto != null) {
-            java.util.ArrayList<Curso> cursosBD = this.instituto.obtenerTodosLosCursosDeBaseDeDatos();
+            ArrayList<Curso> cursosBD = this.instituto.obtenerTodosLosCursosDeBaseDeDatos();
             if (cursosBD != null) {
                 for (Curso c : cursosBD) {
                     String profe = c.getDocumentoDocente();
@@ -266,7 +275,7 @@ public class alumno extends JFrame {
                         for (String reg : c.getAlumnosAprobados()) {
                             if (reg != null && reg.trim().startsWith(miDni)) {
                                 String notaFinal = "Aprobado";
-                                String[] splitNota = reg.split(java.util.regex.Pattern.quote(" (Nota: "));
+                                String[] splitNota = reg.split(Pattern.quote(" (Nota: "));
                                 if (splitNota.length > 1) {
                                     notaFinal = "Aprobado (Nota: " + splitNota[1].replace(")", "") + ")";
                                 }
@@ -282,7 +291,7 @@ public class alumno extends JFrame {
                         for (String reg : c.getAlumnosDesaprobados()) {
                             if (reg != null && reg.trim().startsWith(miDni)) {
                                 String motivoFinal = "Desaprobado";
-                                String[] splitMotivo = reg.split(java.util.regex.Pattern.quote(" (Motivo: "));
+                                String[] splitMotivo = reg.split(Pattern.quote(" (Motivo: "));
                                 if (splitMotivo.length > 1) {
                                     motivoFinal = "Desaprobado (" + splitMotivo[1].replace(")", "") + ")";
                                 }
@@ -336,12 +345,12 @@ public class alumno extends JFrame {
     }
 
     /**
-                         * Method generated by IntelliJ IDEA GUI Designer
-                         * >>> IMPORTANT!! <<<
-                         * DO NOT edit this method OR call it in your code!
-                         *
-                         * @noinspection ALL
-                         */
+     * Method generated by IntelliJ IDEA GUI Designer
+     * >>> IMPORTANT!! <<<
+     * DO NOT edit this method OR call it in your code!
+     *
+     * @noinspection ALL
+     */
     private void $$$setupUI$$$() {
         final JPanel panel1 = new JPanel();
         panel1.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(3, 3, new Insets(0, 0, 0, 0), -1, -1));
@@ -458,7 +467,7 @@ public class alumno extends JFrame {
         final com.intellij.uiDesigner.core.Spacer spacer3 = new com.intellij.uiDesigner.core.Spacer();
         jpanel.add(spacer3, new com.intellij.uiDesigner.core.GridConstraints(1, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_VERTICAL, 1, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, null, null, null, 0, false));
         final JPanel panel12 = new JPanel();
-        panel12.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(4, 2, new Insets(0, 0, 0, 0), -1, -1));
+        panel12.setLayout(new com.intellij.uiDesigner.core.GridLayoutManager(3, 2, new Insets(0, 0, 0, 0), -1, -1));
         jpanel.add(panel12, new com.intellij.uiDesigner.core.GridConstraints(1, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_CENTER, com.intellij.uiDesigner.core.GridConstraints.FILL_BOTH, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, null, null, null, 0, false));
         final JLabel label7 = new JLabel();
         label7.setText("Informacion");
@@ -471,15 +480,10 @@ public class alumno extends JFrame {
         final JLabel label9 = new JLabel();
         label9.setText("Apellido:");
         panel12.add(label9, new com.intellij.uiDesigner.core.GridConstraints(2, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
-        final JLabel label10 = new JLabel();
-        label10.setText("Email:");
-        panel12.add(label10, new com.intellij.uiDesigner.core.GridConstraints(3, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
         textnombre = new JTextField();
         panel12.add(textnombre, new com.intellij.uiDesigner.core.GridConstraints(1, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         textapellido = new JTextField();
         panel12.add(textapellido, new com.intellij.uiDesigner.core.GridConstraints(2, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
-        textemail = new JTextField();
-        panel12.add(textemail, new com.intellij.uiDesigner.core.GridConstraints(3, 1, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_WEST, com.intellij.uiDesigner.core.GridConstraints.FILL_HORIZONTAL, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_WANT_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, new Dimension(150, -1), null, 0, false));
         guardarcambios = new JButton();
         guardarcambios.setText("Guardar Cambios");
         jpanel.add(guardarcambios, new com.intellij.uiDesigner.core.GridConstraints(2, 0, 1, 1, com.intellij.uiDesigner.core.GridConstraints.ANCHOR_EAST, com.intellij.uiDesigner.core.GridConstraints.FILL_NONE, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_SHRINK | com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_CAN_GROW, com.intellij.uiDesigner.core.GridConstraints.SIZEPOLICY_FIXED, null, null, null, 0, false));
