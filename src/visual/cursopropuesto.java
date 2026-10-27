@@ -78,6 +78,12 @@ public class cursopropuesto extends JFrame {
                     return;
                 }
 
+
+                if (nombreCurso.matches("\\d+")) {
+                    JOptionPane.showMessageDialog(null, "El nombre del curso no puede ser puramente numérico.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
                 try {
                     int cupoMax = Integer.parseInt(cupoTexto);
 
@@ -118,7 +124,7 @@ public class cursopropuesto extends JFrame {
                         if (frame instanceof visual.paneladmin) {
                             visual.paneladmin adminVentana = (visual.paneladmin) frame;
                             adminVentana.actualizarTablasAdmin();
-                            System.out.println(" ¡Grilla del Administrador forzada a actualizar con éxito!");
+                            System.out.println(" ¡actualizado con éxito!");
                         }
                     }
 
@@ -131,6 +137,7 @@ public class cursopropuesto extends JFrame {
                 }
             }
         });
+
 
 
 
