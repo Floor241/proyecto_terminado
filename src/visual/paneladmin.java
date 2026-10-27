@@ -405,7 +405,7 @@ public class paneladmin extends JFrame {
                     textField1.setText("");
                     nom.setText("");
                     aod.setText("Sin seleccionar");
-                    JOptionPane.showMessageDialog(null, "La contraseña del usuario con DNI " + dniSeleccionado + " ha sido blanqueada con éxito en la Base de Datos.", "Blanqueo Exitoso", JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(null, "La contraseña del usuario con DNI " + dniSeleccionado + " ha sido blanqueada con éxito.", "Blanqueo Exitoso", JOptionPane.INFORMATION_MESSAGE);
                 } else {
                     JOptionPane.showMessageDialog(null, "No se pudo actualizar la contraseña en MySQL Workbench.", "Error", JOptionPane.ERROR_MESSAGE);
                 }
@@ -662,6 +662,7 @@ public class paneladmin extends JFrame {
         JLabel encabezado = new JLabel(" Listado oficial de alumnos para: " + nombreCurso, JLabel.CENTER);
         encabezado.setFont(new Font("Arial", Font.BOLD, 14));
         ventanaFlotante.add(encabezado, BorderLayout.NORTH);
+
         DefaultTableModel modeloTablaAlumnos = new DefaultTableModel();
         modeloTablaAlumnos.addColumn("Documento / DNI");
         modeloTablaAlumnos.addColumn("Nombre y Apellido");
@@ -669,38 +670,59 @@ public class paneladmin extends JFrame {
         JTable tablaAlumnos = new JTable(modeloTablaAlumnos);
         JScrollPane scrollPanel = new JScrollPane(tablaAlumnos);
         ventanaFlotante.add(scrollPanel, BorderLayout.CENTER);
+
         Instituto institutoReal = (modelo.Sistema.getInstituto() != null) ? modelo.Sistema.getInstituto() : getInstituto();
         if (institutoReal == null) institutoReal = new Instituto();
+
         java.util.ArrayList cursosBD = institutoReal.obtenerTodosLosCursosDeBaseDeDatos();
         if (cursosBD != null) {
-
             for (int i = 0; i < cursosBD.size(); i++) {
                 Curso c = (Curso) cursosBD.get(i);
                 if (c.getId().equals(idCurso)) {
+
+                    java.util.HashSet<String> dnisUnicos = new java.util.HashSet<>();
+
                     if (c.getAlumnosInscritos() != null) {
-                        for (Object dniObj : c.getAlumnosInscritos()) {
-                            String dniAlumno = (String) dniObj;
-                            Usuario alumno = institutoReal.buscarUsuarioPorDni(dniAlumno);
-                            if (alumno != null) {
-                                modeloTablaAlumnos.addRow(new Object[]{
-                                        alumno.getDocumento(),
-                                        alumno.getNombre() + " " + alumno.getApellido(),
-                                        "Alumno"
-                                });
-                            } else {
-                                modeloTablaAlumnos.addRow(new Object[]{dniAlumno, "Usuario no registrado", "Alumno"});
-                            }
+                        for (Object d : c.getAlumnosInscritos()) dnisUnicos.add((String) d);
+                    }
+                    if (c.getAlumnosAprobados() != null) {
+                        for (Object d : c.getAlumnosAprobados()) {
+                            String s = (String) d;
+                            dnisUnicos.add(s.split(" ")[0].trim());
+                        }
+                    }
+                    if (c.getAlumnosDesaprobados() != null) {
+                        for (Object d : c.getAlumnosDesaprobados()) {
+                            String s = (String) d;
+                            dnisUnicos.add(s.split(" ")[0].trim());
+                        }
+                    }
+
+
+                    for (String dniAlumno : dnisUnicos) {
+                        Usuario alumno = institutoReal.buscarUsuarioPorDni(dniAlumno);
+                        if (alumno != null) {
+                            modeloTablaAlumnos.addRow(new Object[]{
+                                    alumno.getDocumento(),
+                                    alumno.getNombre() + " " + alumno.getApellido(),
+                                    "Alumno"
+                            });
+                        } else {
+                            modeloTablaAlumnos.addRow(new Object[]{dniAlumno, "Usuario no registrado", "Alumno"});
                         }
                     }
                     break;
                 }
             }
         }
+
         JButton botonCerrar = new JButton("Cerrar Lista");
         botonCerrar.addActionListener(e -> ventanaFlotante.dispose());
         ventanaFlotante.add(botonCerrar, BorderLayout.SOUTH);
         ventanaFlotante.setVisible(true);
     }
+
+
     public void cargarUsuarios(String filtro) {
         DefaultTableModel modeloTabla = new DefaultTableModel(
                 new Object[]{"DNI / Documento", "Nombre", "Apellido", "Rol"}, 0

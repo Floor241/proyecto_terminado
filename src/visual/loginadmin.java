@@ -57,7 +57,13 @@ public class loginadmin extends JFrame {
                             String motivoSancion = usuarioEncontrado.getMensajeSancion();
                             if (motivoSancion == null || motivoSancion.trim().isEmpty()) {
                                 motivoSancion = "Cuenta deshabilitada por la administración del Instituto.";
+                            } else {
+
+                                motivoSancion = motivoSancion.replace("\\u00f3", "ó")
+                                        .replace("\\u00f3n", "ón")
+                                        .replace("\\u00f1", "ñ");
                             }
+
                             JOptionPane.showMessageDialog(null,
                                     " ACCESO DENEGADO \n\n" +
                                             "Tu cuenta se encuentra temporalmente deshabilitada.\n" +
@@ -67,6 +73,7 @@ public class loginadmin extends JFrame {
                                     JOptionPane.ERROR_MESSAGE);
                             return;
                         }
+
 
                         if (usuarioEncontrado.getPassword().equals(usuarioEncontrado.getDocumento())) {
                             JOptionPane.showMessageDialog(null, "Primer acceso detectado. Por seguridad, debe cambiar su contraseña.", "Cambio Obligatorio", JOptionPane.WARNING_MESSAGE);

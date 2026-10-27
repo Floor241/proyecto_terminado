@@ -100,7 +100,8 @@ public class Instituto {
             String respuesta = enviarPeticionHttpGet(url).trim();
             System.out.println("RESPUESTA CRUDA DE PHP: " + respuesta);
 
-            return respuesta.equalsIgnoreCase("OK");
+            return respuesta.equalsIgnoreCase("OK") || respuesta.contains("Éxito");
+
         } catch (Exception e) {
             e.printStackTrace();
             return false;
@@ -151,22 +152,23 @@ public class Instituto {
         return lista;
     }
 
-    public boolean modificarUsuarioEnBaseDeDatos(String dniOriginal, String nuevoNombre, String nuevoApellido, String nuevoRol) {
+    public boolean modificarUsuarioEnBaseDeDatos(String dni, String nombre, String apellido, String rol) {
         try {
             String url = "http://localhost/instituto_api/actualizar_usuario.php?"
-                    + "documento=" + java.net.URLEncoder.encode(dniOriginal.trim(), "UTF-8")
-                    + "&nombre=" + java.net.URLEncoder.encode(nuevoNombre.trim(), "UTF-8")
-                    + "&apellido=" + java.net.URLEncoder.encode(nuevoApellido.trim(), "UTF-8")
-                    + "&rol=" + java.net.URLEncoder.encode(nuevoRol.trim(), "UTF-8");
+                    + "documento=" + java.net.URLEncoder.encode(dni, "UTF-8")
+                    + "&nombre=" + java.net.URLEncoder.encode(nombre, "UTF-8")
+                    + "&apellido=" + java.net.URLEncoder.encode(apellido, "UTF-8")
+                    + "&rol=" + java.net.URLEncoder.encode(rol, "UTF-8");
 
             String respuesta = enviarPeticionHttpGet(url).trim();
-            return respuesta.equalsIgnoreCase("OK");
+
+
+            return respuesta.equalsIgnoreCase("OK") || respuesta.contains("Éxito");
+
         } catch (Exception e) {
-            e.printStackTrace();
             return false;
         }
     }
-
 
     public boolean cambiarEstadoUsuarioEnBaseDeDatos(String dni, boolean nuevoEstado, String motivoSancion) {
         try {
